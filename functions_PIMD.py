@@ -12,35 +12,44 @@ conv_1 = 96.4853     # eV to kJ/mol
 part = 3                     # Quantum Particles
 kb = 3.16683 * 10 ** (-6)    # Boltzman in Hartree/K
 hbar, m = 1, 1               # hbar and mass
-# For Exitons                                            from [ ... ]
-k_exitons = 9.64931080e-07
-w = math.sqrt(k_exitons / 0.84*m)
-hw_exitons = 2.579052069  #  (26.73mev) -  0.02673eV * conv_1   [kJ/mol]
 
+# For Exitons                                            from [ ... ]
+# hw = 26.73meV   m=0.84m_e
+k_exitons = 8.10542107e-07  # k = 0.84mw^2 spring constant Hartree/Bohr^2
+w_exitons = math.sqrt(k_exitons / 0.84*m)   # Oscillator Frequency
+hw_exitons = (hbar * w_exitons) / (1/conv)  # 2.5790520686098652 kJ/mol
 #                                                       until here [ ... ]
 # For Barak's Fermions Article                           from [ ... ]
+#hw = 3meV
 k_harmonic_fermions = 1.21647924 * 10 ** (-8)  # spring constant Hartree/Bohr^2
 w = math.sqrt(k_harmonic_fermions / m)
 hw = hbar*w  # 0.0001104536101718726   # [sqrt(Hartree /kg*K]
 hw_2 = 0.2894557624503526   # 0.003 * conv_1  # 0.289458 kJ/mol    3meV as in the Article (to have same number as Barak)
 #                                                       until here [ ... ]
 # Cut the data until energy minimization
+cut_data_exitons = 1  # for data
+cut_log_exitons = cut_data_exitons - 1       # for pimdb log the minus 1 is for the data to be with same index
+cutoff_exitons = 100  # for block avg
+
+
+# Cut the data until energy minimization  PIMD_F_B_S
 cut_data = 10000  # for data
 cut_log = cut_data - 1       # for pimdb log the minus 1 is for the data to be with same index
 cutoff = 0  # for block avg
 
 #################################################################################################################
 
-def hw_to_k_const(hw_ev):
+def hw_to_k_const(hw_ev, mass_factor):
     '''
     :param hw: hbar omega of the harmonic oscillator in meV
+    mass_factor: for example exitons are 0.84 of electron mass so : 0.84
     conv_1 = 96.4853  -> eV to kJ/mol
     conv = 2625.499638   [1 Hartree = 2625.499638 kJ/mol]
     :return: k - spring constant in Hartree / Bohr^2 (for LAMMPS unit: electron)
     '''
     hw_ev = hw_ev * 0.001  # from meV to eV
     w0 = hw_ev * conv_1 / conv
-    k = m * w0**2
+    k = mass_factor * w0**2
     return k
 
 
@@ -51,8 +60,8 @@ def temp_for_lammps(hw_ev, C):
     '''
     # Conversion from Hartree to kJ/mol
     hw_ev = hw_ev * 0.001   # from meV to eV
-    kb1 = kb * conv  # [kJ/mol/K]
     hw_kj_mol = hw_ev * conv_1
+    kb1 = kb * conv  # [kJ/mol/K]
     b = C / hw_kj_mol # [1 / kJ/mol]
     T = 1/(kb1*b)
     return T, b
@@ -97,7 +106,7 @@ def block_averaging(cutoff, block_size, data):
 
 
 def make_block_average(cutoff, data):
-    block_size_array = np.linspace(1, 10000, 200).astype(int)
+    block_size_array = np.linspace(1, 100, 1000).astype(int)
     avg_array = np.zeros(len(block_size_array))
     stdv_array = np.zeros(len(block_size_array))
     number_of_blocks_array = np.zeros(len(block_size_array))
@@ -116,8 +125,8 @@ def make_block_average(cutoff, data):
     plt.legend()
     plt.show()
 # To run block averaging
-    # potenital_energy, time_step, trap, newvir, trapvir = etot_b_2d_harmonic(number_of_files, path)
-    # make_block_average(cutoff, pot)
+# potenital_energy, time_step, trap, newvir, trapvir = etot_b_2d_harmonic(number_of_files, path)
+# make_block_average(cutoff, pot)
 
 
 def read_file_pot(filename, cut, s_rows, s_footer):
@@ -196,7 +205,7 @@ def etot_b_2d_harmonic(number_of_files, path):  # Bosons
         trapvir += trapvir1
     number_of_blocks, avg_pot_exp, stdv_pot = block_averaging(cutoff, block_size=900, data=pot)
 
-    return time_step, pot, avg_pot_exp, stdv_pot, trap*conv, trapvir*conv, newvir*conv
+    return time_step, pot*conv, avg_pot_exp, stdv_pot, trap*conv, trapvir*conv, newvir*conv
 
 
 def etot_f_2d_harmonic(number_of_files, path, beta):   # Fermions
@@ -211,6 +220,7 @@ def etot_f_2d_harmonic(number_of_files, path, beta):   # Fermions
     time_step, pot, avg_pot_exp, stdv_pot, trap, trapvir, newvir = etot_b_2d_harmonic(number_of_files, path)
     sign_array = avg_sign(file_pimdb, beta, cut_log).reset_index(drop=True)   # Sign average
     wj = sum(sign_array)    # Weights for sign average of each simulation
+
     e_s_num_h = (((trap.reset_index(drop=True) / number_of_files)) + newvir.reset_index(drop=True)) * sign_array    # (orange) for harmonic potential
     e_s_num_h = np.mean(e_s_num_h)
     s_denom = sign_array
@@ -236,17 +246,17 @@ def etot_f_2d_harmonic_aux(number_of_files, path, beta):   # Fermions
 
                            # Below - a - Auxiliary: (grey) for sum of potentials that are position dependent
     e_s_num_a = ((pot.reset_index(drop=True) / number_of_files) + newvir.reset_index(drop=True)) * sign_array
-    e_s_num_a = np.mean(e_s_num_a)
+    e_s_num_a_mean = np.mean(e_s_num_a)
                            # Below - b - bogoliubov: (purpule) <V_g>_H'   (needs to be subtracted! )
     e_s_num_b = (pot.reset_index(drop=True) - trap.reset_index(drop=True)) * sign_array
-    e_s_num_b = np.mean(e_s_num_b)
+    e_s_num_b_mean = np.mean(e_s_num_b)
 
     s_denom = sign_array
-    s_denom = np.mean(s_denom)
+    s_denom_mean = np.mean(s_denom)
 
                            # Below a is for <E>_H' and b for <V_g>_H'
-    avg_etot_f_a = (e_s_num_a ) / s_denom   # Auxiliary
-    avg_etot_f_b = (e_s_num_b ) / s_denom   # Bogoliubov
+    avg_etot_f_a = (e_s_num_a_mean ) / s_denom_mean   # Auxiliary
+    avg_etot_f_b = (e_s_num_b_mean ) / s_denom_mean   # Bogoliubov
 
 
 
@@ -304,4 +314,47 @@ def ana_3_fermions(beta, hbarw):
 #
 #     return time_step, sign_array, wj, avg_etot_f_a, avg_etot_f_b, avg_trap_f_num, \
 #            avg_trapvir_f_num, avg_newvir_f_num
+
+def etot_b_2d_exitons(number_of_files, path):  # Bosons
+    '''
+    In the Boson Ensemble
+    :param number_of_files: number of beads
+    :param path: the file path
+    :return: time_step, pot, avg_pot_exp, stdv_pot, trap, trapvir, newvir
+    '''
+
+    file = [path+'log.lammps.{}'.format(k) for k in range(0, number_of_files)]  # Makes a list of log.lammps.{}
+    pot, trap, newvir, trapvir = 0, 0, 0, 0
+    time_step = 0
+    for i in range(0, number_of_files):
+        try:
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 153, 38)  # Harmonic (153,38) Auxiliary(167, 38)
+        except:
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 167, 38)
+        pot += potential
+        trap += trap1
+        newvir += newvir1
+        trapvir += trapvir1
+    number_of_blocks, avg_pot_exp, stdv_pot = block_averaging(cutoff, block_size=20, data=pot)
+
+    return time_step, pot*conv, avg_pot_exp*conv, stdv_pot*conv, trap*conv, trapvir*conv, newvir*conv
+
+def ana_3_bosons(beta, hbarw):
+    '''
+    :return: Analytical result for three Fermions in Canonical Ensemble <E> in harmonic potential
+    '''
+    exp = np.exp(beta * hbarw)
+    exp2 = np.exp(2 * beta * hbarw)
+    exp3 = np.exp(3 * beta * hbarw)
+    exp4 = np.exp(4 * beta * hbarw)
+    exp5 = np.exp(5 * beta * hbarw)
+    exp6 = np.exp(6 * beta * hbarw)
+    exp7 = np.exp(7 * beta * hbarw)
+    exp8 = np.exp(8 * beta * hbarw)
+    exp9 = np.exp(9 * beta * hbarw)
+    exp10 = np.exp(10 * beta * hbarw)
+    num = hbarw*(12*exp10+28*exp9+79*exp8+169*exp7+241*exp6+238*exp5+241*exp4+169*exp3+79*exp2+28*exp+12)
+    denom = (exp-1)*(exp+1)*(exp2+exp+1)*(4*exp6+2*exp5+7*exp4+10*exp3+7*exp2+2*exp+4)
+    etot_3_b = num/denom
+    return etot_3_b
 

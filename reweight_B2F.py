@@ -90,7 +90,7 @@ seeds = [98743501, 269451, 666472, 782943, 1239451]
 
 #User defined parameters
 kB = 0.0083144621 #Boltzmann const in kJ/mol/K
-bhw_val = [3] #[1.25, 1.5, 1.75, 2, 2.5]
+bhw_val = [6] #[1.25, 1.5, 1.75, 2, 2.5]
 d = 2
 
 step_start = 10000 #line to start from colvar.
@@ -120,7 +120,7 @@ for g in gs:
             T = 34.8/bhw
             beta = 1/(kB*T)
             # path_to_save = "/home/netanelb2/Desktop/Netanel/Research/PIMD/runs/fermions/five2/bhw1p25/"
-            path_to_save = '/home/netanelb2/Desktop/Netanel/Research/PIMD/runs/fermions/gauss/bogo/bhw3/'
+            path_to_save = '/home/netanelb2/Desktop/Netanel/Research/PIMD/runs/fermions/gauss/bogo/bhw6/'
         
             path = path_to_save+"/sim" + str(ind+1) + "/"
             print(path)
