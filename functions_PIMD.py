@@ -27,13 +27,13 @@ hw = hbar*w  # 0.0001104536101718726   # [sqrt(Hartree /kg*K]
 hw_2 = 0.2894557624503526   # 0.003 * conv_1  # 0.289458 kJ/mol    3meV as in the Article (to have same number as Barak)
 #                                                       until here [ ... ]
 # Cut the data until energy minimization
-cut_data_exitons = 1  # for data
+cut_data_exitons = 1000  # for data
 cut_log_exitons = cut_data_exitons - 1       # for pimdb log the minus 1 is for the data to be with same index
 cutoff_exitons = 100  # for block avg
-
+perm_length = 3
 
 # Cut the data until energy minimization  PIMD_F_B_S
-cut_data = 10000  # for data
+cut_data = 1000  # for data
 cut_log = cut_data - 1       # for pimdb log the minus 1 is for the data to be with same index
 cutoff = 0  # for block avg
 
@@ -106,7 +106,7 @@ def block_averaging(cutoff, block_size, data):
 
 
 def make_block_average(cutoff, data):
-    block_size_array = np.linspace(1, 100, 1000).astype(int)
+    block_size_array = np.linspace(1, 1000, 500).astype(int)
     avg_array = np.zeros(len(block_size_array))
     stdv_array = np.zeros(len(block_size_array))
     number_of_blocks_array = np.zeros(len(block_size_array))
@@ -196,7 +196,7 @@ def etot_b_2d_harmonic(number_of_files, path):  # Bosons
     time_step = 0
     for i in range(0, number_of_files):
         try:
-            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 153, 38)  # Harmonic (153,38) Auxiliary(167, 38)
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 145, 38)  # Harmonic (153,38) Auxiliary(167, 38)  sgnprob(145, 38)
         except:
             potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 167, 38)
         pot += potential
@@ -315,7 +315,50 @@ def ana_3_fermions(beta, hbarw):
 #     return time_step, sign_array, wj, avg_etot_f_a, avg_etot_f_b, avg_trap_f_num, \
 #            avg_trapvir_f_num, avg_newvir_f_num
 
-def etot_b_2d_exitons(number_of_files, path):  # Bosons
+#                                                                                # Exciton
+
+
+def permutation_prob_3(filename, beta, cut, perm_length):
+    '''
+    :param filename: pimdb.log file
+    :param beta: beta in 1 / kJ/mol
+    :param cut: he first "cut" values will be eliminated.
+    :return: the average sign value
+    '''
+    # Here the pimdb.log file is in units of kJ/mol hence beta has to also be in same units
+    df = pd.read_csv(filename, delimiter='\s+')
+    df = df.iloc[cut:-1] # I added this and removed "cut from all [] example  e_1_1 = df.iloc[cut:, 0]
+
+    v_3_column = df.iloc[:, -1]
+    v_2_column = df.iloc[:, -2]
+    v_1_column = df.iloc[:, -3]
+    v_0_column = df.iloc[:, -4]
+    # e_1_1 = df.iloc[:, 0]
+    # e_2_2 = df.iloc[:, 1]
+    # e_2_1 = df.iloc[:, 2]
+    e_3_3 = df.iloc[:, 3]
+    e_3_2 = df.iloc[:, 4]
+    e_3_1 = df.iloc[:, 5]
+
+    v_3 = np.array([v_2_column, v_1_column, v_0_column])
+    e_3 = np.array([e_3_1, e_3_2, e_3_3])
+    permutation_probability = np.array([])
+    length_array = len(e_3[0])
+    p_l_denom = np.exp(- beta * (e_3_1 + v_2_column)) + np.exp(- beta * (e_3_2 + v_1_column)) \
+                + np.exp(- beta * (e_3_3 + v_0_column))
+    for j in range(0, perm_length):
+        p_l_num = np.exp(- beta * (e_3[j] + v_3[j]))
+        p_l = np.asarray(p_l_num / p_l_denom)
+        # permutation_probability = np.append(permutation_probability, np.array(p_l))      #THIS
+        permutation_probability = np.append(permutation_probability, np.mean(np.array(p_l)))
+
+    l_array = np.arange(1, perm_length+1)  # array([1, 2, 3])
+
+    # return l_array, permutation_probability.reshape((perm_length), length_array)          #THIS
+    return l_array, permutation_probability
+
+
+def etot_b_2d_exitons(number_of_files, path, beta):  # Bosons
     '''
     In the Boson Ensemble
     :param number_of_files: number of beads
@@ -324,24 +367,29 @@ def etot_b_2d_exitons(number_of_files, path):  # Bosons
     '''
 
     file = [path+'log.lammps.{}'.format(k) for k in range(0, number_of_files)]  # Makes a list of log.lammps.{}
+    file_pimdb = path + 'pimdb.log'
+    l_cond, perm_cond = permutation_prob_3(file_pimdb, beta, cut_log_exitons, perm_length)
     pot, trap, newvir, trapvir = 0, 0, 0, 0
     time_step = 0
     for i in range(0, number_of_files):
         try:
-            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 153, 38)  # Harmonic (153,38) Auxiliary(167, 38)
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 153, 38)  #3bosons (154,38) 10boson (209,38) 100boson(929, 38)
         except:
-            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 167, 38)
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 209, 38)
         pot += potential
         trap += trap1
         newvir += newvir1
         trapvir += trapvir1
     number_of_blocks, avg_pot_exp, stdv_pot = block_averaging(cutoff, block_size=20, data=pot)
+    number_of_blocks_trap, avg_trap_exp, stdv_trap = block_averaging(cutoff, block_size=20, data=trap)
 
-    return time_step, pot*conv, avg_pot_exp*conv, stdv_pot*conv, trap*conv, trapvir*conv, newvir*conv
+    return time_step, pot*conv, avg_pot_exp*conv, stdv_pot*conv, \
+           trap*conv, stdv_trap*conv, trapvir*conv, newvir*conv, l_cond, perm_cond
+
 
 def ana_3_bosons(beta, hbarw):
     '''
-    :return: Analytical result for three Fermions in Canonical Ensemble <E> in harmonic potential
+    :return: Analytical result for three Bosons in Canonical Ensemble <E> in harmonic potential
     '''
     exp = np.exp(beta * hbarw)
     exp2 = np.exp(2 * beta * hbarw)
@@ -357,4 +405,103 @@ def ana_3_bosons(beta, hbarw):
     denom = (exp-1)*(exp+1)*(exp2+exp+1)*(4*exp6+2*exp5+7*exp4+10*exp3+7*exp2+2*exp+4)
     etot_3_b = num/denom
     return etot_3_b
+
+
+def find_min_x_y(z):
+    '''
+    To find the (x,y) of all the minima of the Moire Potenital to write an xyz file
+     of the boson's initial positions for LAMMPS simulation
+    :param z: np array of function of the Moire potential
+    :return: (x,y) coordinates
+    '''
+    z_min = min(z)
+    x_cor, y_cor = 0, 0
+    global x, y
+    for index, value in enumerate(z):
+        if value == z_min:
+            x_cor = x[index]
+            y_cor = y[index]
+    return (x_cor, y_cor)
+
+
+def f_minimum(x):
+    '''
+    gives the Minimum of a 2D function If this is called: fmin(f_minimum, np.array([0, 0]))
+    :param x: numpy array of x and y coordinate of Initial Guess
+    :return: the functions value at a certain point (finds minimum)
+    '''
+    global hbaromega, V_e, pi, moire_period, psi
+    z = hbaromega + 2 * V_e * (np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * x[0] - (2 * pi / moire_period) * x[1] - psi) +
+                             np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * x[0] + (2 * pi / moire_period) * x[1] - psi) +
+                             np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * x[0] - psi))
+    return z
+
+
+#                                                                                # Sign Problem
+def ana_2_bosons(beta, hbarw):
+    '''
+    :return: Analytical result for three Fermions in Canonical Ensemble <E> in harmonic potential
+    '''
+    exp = np.exp(beta * hbarw)
+    exp2 = np.exp(2 * beta * hbarw)
+    exp3 = np.exp(3 * beta * hbarw)
+    exp4 = np.exp(4 * beta * hbarw)
+    exp5 = np.exp(5 * beta * hbarw)
+    exp6 = np.exp(6 * beta * hbarw)
+    exp7 = np.exp(7 * beta * hbarw)
+    exp8 = np.exp(8 * beta * hbarw)
+    exp9 = np.exp(9 * beta * hbarw)
+    exp10 = np.exp(10 * beta * hbarw)
+    num = 2*hbarw*(exp4+exp3+4*exp2+1)
+    denom = exp4-1
+    # num = hbarw*(exp+exp2+2)
+    # denom = exp2-1
+    etot_2_b = num/denom
+    return etot_2_b
+
+def sgnprob_s1_extract_2b(filename, beta, cut):
+    '''
+    :param filename: pimdb.log file
+    :param beta: beta in 1 / kJ/mol
+    :param cut: he first "cut" values will be eliminated.
+    :return: the average sign value
+    '''
+    # Here the pimdb.log file is in units of kJ/mol hence beta has to also be in same units
+    df = pd.read_csv(filename, delimiter='\s+')
+    df = df.iloc[cut:-1] # I added this and removed "cut from all [] example  e_1_1 = df.iloc[cut:, 0]
+    e_1_1 = df.iloc[:, 0]
+    e_2_2 = df.iloc[:, 1]
+    e_2_1 = df.iloc[:, 2]
+
+    s1 = e_2_2 - (e_2_1+e_1_1)
+
+    return s1
+
+def sgnprob_etot_b_2d_harmonic(number_of_files, path, beta):  # Bosons
+    '''
+    In the Boson Ensemble
+    :param number_of_files: number of beads
+    :param path: the file path
+    :return: time_step, pot, avg_pot_exp, stdv_pot, trap, trapvir, newvir
+    '''
+    file = [path+'log.lammps.{}'.format(k) for k in range(0, number_of_files)]  # Makes a list of log.lammps.{}
+    file_pimdb = path + 'pimdb.log'
+    pot, trap, newvir, trapvir = 0, 0, 0, 0
+    time_step = 0
+    s1 = sgnprob_s1_extract_2b(file_pimdb, beta, cut_log)
+
+    for i in range(0, number_of_files):
+        try:
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 145, 38)  # Harmonic (153,38) Auxiliary(167, 38)  sgnprob(145, 38)
+
+        except:
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 167, 38)
+        pot += potential
+        trap += trap1
+        newvir += newvir1
+        trapvir += trapvir1
+    number_of_blocks, avg_pot_exp, stdv_pot = block_averaging(cutoff, block_size=900, data=pot)
+
+    return time_step, pot*conv, avg_pot_exp, stdv_pot, trap*conv, trapvir*conv, newvir*conv, s1
+
 

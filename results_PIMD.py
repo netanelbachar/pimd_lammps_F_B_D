@@ -153,8 +153,8 @@ sign_f_array_g_a_barak = [0.26612186003, 0.1506680643, 0.09444886968, 0.05216319
 
 e3b_barak, s_e3b_barak = statistical_error_estimation(etot_f_3_b_array_barak, wj_3_barak)
 e4b_barak, s_e4b_barak = statistical_error_estimation(etot_f_4_b_array_barak, wj_4_barak)
-e5b_barak, s_e5b_barak  = statistical_error_estimation(etot_f_5_b_array_barak, wj_5_barak)
-e6b_barak, s_e6b_barak  = statistical_error_estimation(etot_f_6_b_array_barak, wj_6_barak)
+e5b_barak, s_e5b_barak = statistical_error_estimation(etot_f_5_b_array_barak, wj_5_barak)
+e6b_barak, s_e6b_barak = statistical_error_estimation(etot_f_6_b_array_barak, wj_6_barak)
 
 
 # print (" EF 3 bogo: ", e3b_barak, "+-", s_e3b_barak)

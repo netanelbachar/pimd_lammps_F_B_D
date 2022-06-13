@@ -81,7 +81,7 @@ import itertools
 correct=False
 
 Natoms = 3
-Nbeads = 72 #[16,24,36,48,72,96]
+Nbeads = 32 #[16,24,36,48,72,96]
 gs = [1]
 lam = 0.0
 Msteps = 75
@@ -90,13 +90,15 @@ seeds = [98743501, 269451, 666472, 782943, 1239451]
 
 #User defined parameters
 kB = 0.0083144621 #Boltzmann const in kJ/mol/K
-bhw_val = [6] #[1.25, 1.5, 1.75, 2, 2.5]
+bhw_val = [3] #[1.25, 1.5, 1.75, 2, 2.5]
 d = 2
 
+
+# DIS BOSON FERMI
 step_start = 10000 #line to start from colvar.
 step_end = 750000 #Final line from colvar
 
-skiprows_in_Phi = 167    #  Harmonic 153   /   Aux 167
+skiprows_in_Phi = 167    #  Harmonic 153   /   Aux 167  # extion3boson 153
 
 #HARMONIC FORCE CONSTANT!
 omega = 0.003 #in eV 
@@ -121,8 +123,9 @@ for g in gs:
             beta = 1/(kB*T)
             # path_to_save = "/home/netanelb2/Desktop/Netanel/Research/PIMD/runs/fermions/five2/bhw1p25/"
             path_to_save = '/home/netanelb2/Desktop/Netanel/Research/PIMD/runs/fermions/gauss/bogo/bhw6/'
-        
-            path = path_to_save+"/sim" + str(ind+1) + "/"
+            path = path_to_save + "/sim" + str(ind + 1) + "/"
+
+
             print(path)
             
             #Get Pot energy
