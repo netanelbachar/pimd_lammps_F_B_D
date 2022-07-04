@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 import time
-
+N = 10 # number of quantum particles
 # Conversions
 conv = 2625.499638   # [1 Hartree = 2625.499638 kJ/mol]    or the other way arround 3.8088E-4
 conv_1 = 96.4853     # eV to kJ/mol
@@ -323,7 +323,7 @@ def permutation_prob_3(filename, beta, cut, perm_length):
     :param filename: pimdb.log file
     :param beta: beta in 1 / kJ/mol
     :param cut: he first "cut" values will be eliminated.
-    :return: the average sign value
+    :return: length of array l and permutation praobability
     '''
     # Here the pimdb.log file is in units of kJ/mol hence beta has to also be in same units
     df = pd.read_csv(filename, delimiter='\s+')
@@ -358,6 +358,64 @@ def permutation_prob_3(filename, beta, cut, perm_length):
     return l_array, permutation_probability
 
 
+def permutation_prob_10(filename, beta, cut, perm_length):
+    '''
+    :param filename: pimdb.log file
+    :param beta: beta in 1 / kJ/mol
+    :param cut: he first "cut" values will be eliminated.
+    :return: length of array l and permutation praobability
+    '''
+    # Here the pimdb.log file is in units of kJ/mol hence beta has to also be in same units
+    df = pd.read_csv(filename, delimiter='\s+')
+    df = df.iloc[cut:-1] # I added this and removed "cut from all [] example  e_1_1 = df.iloc[cut:, 0]
+
+    v_10_column = df.iloc[:, -1]
+    v_9_column = df.iloc[:, -2]
+    v_8_column = df.iloc[:, -3]
+    v_7_column = df.iloc[:, -4]
+    v_6_column = df.iloc[:, -5]
+    v_5_column = df.iloc[:, -6]
+    v_4_column = df.iloc[:, -7]
+    v_3_column = df.iloc[:, -8]
+    v_2_column = df.iloc[:, -9]
+    v_1_column = df.iloc[:, -10]
+    v_0_column = df.iloc[:, -11]
+
+
+    e_10_1 = df.iloc[:, -12]
+    e_10_2 = df.iloc[:, -13]
+    e_10_3 = df.iloc[:, -14]
+    e_10_4 = df.iloc[:, -15]
+    e_10_5 = df.iloc[:, -16]
+    e_10_6 = df.iloc[:, -17]
+    e_10_7 = df.iloc[:, -18]
+    e_10_8 = df.iloc[:, -19]
+    e_10_9 = df.iloc[:, -20]
+    e_10_10 = df.iloc[:, -21]
+
+    v_10 = np.array([v_9_column, v_8_column, v_7_column, v_6_column, v_5_column,
+                     v_4_column, v_3_column, v_2_column, v_1_column, v_0_column])
+    e_10 = np.array([e_10_1, e_10_2, e_10_3, e_10_4, e_10_5, e_10_6, e_10_7, e_10_8, e_10_9, e_10_10])
+
+    permutation_probability = np.array([])
+    length_array = len(e_10[0])
+    p_l_denom = np.exp(- beta * (e_10_1 + v_9_column)) + np.exp(- beta * (e_10_2 + v_8_column)) + \
+                np.exp(- beta * (e_10_3 + v_7_column)) + np.exp(- beta * (e_10_4 + v_6_column)) + \
+                np.exp(- beta * (e_10_5 + v_5_column)) + np.exp(- beta * (e_10_6 + v_4_column)) + \
+                np.exp(- beta * (e_10_7 + v_3_column)) + np.exp(- beta * (e_10_8 + v_2_column)) + \
+                np.exp(- beta * (e_10_9 + v_1_column)) + np.exp(- beta * (e_10_10 + v_0_column))
+    for j in range(0, perm_length):
+        p_l_num = np.exp(- beta * (e_10[j] + v_10[j]))
+        p_l = np.asarray(p_l_num / p_l_denom)
+        # permutation_probability = np.append(permutation_probability, np.array(p_l))      #THIS
+        permutation_probability = np.append(permutation_probability, np.mean(np.array(p_l)))
+
+    l_array = np.arange(1, perm_length+1)  # array([1, 2, 3])
+
+    # return l_array, permutation_probability.reshape((perm_length), length_array)          #THIS
+    return l_array, permutation_probability
+
+
 def etot_b_2d_exitons(number_of_files, path, beta):  # Bosons
     '''
     In the Boson Ensemble
@@ -368,12 +426,16 @@ def etot_b_2d_exitons(number_of_files, path, beta):  # Bosons
 
     file = [path+'log.lammps.{}'.format(k) for k in range(0, number_of_files)]  # Makes a list of log.lammps.{}
     file_pimdb = path + 'pimdb.log'
-    l_cond, perm_cond = permutation_prob_3(file_pimdb, beta, cut_log_exitons, perm_length)
+    if N == 3:
+        l_cond, perm_cond = permutation_prob_3(file_pimdb, beta, cut_log_exitons, 3)
+    else:
+        l_cond, perm_cond = permutation_prob_10(file_pimdb, beta, cut_log_exitons, 10)
+
     pot, trap, newvir, trapvir = 0, 0, 0, 0
     time_step = 0
     for i in range(0, number_of_files):
         try:
-            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 153, 38)  #3bosons (154,38) 10boson (209,38) 100boson(929, 38)
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 153, 38)  #3bosons (153,38) 10boson (209,38) 100boson(929, 38)
         except:
             potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 209, 38)
         pot += potential
