@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 import time
-N = 10 # number of quantum particles
+N = 3 # number of quantum particles
 # Conversions
 conv = 2625.499638   # [1 Hartree = 2625.499638 kJ/mol]    or the other way arround 3.8088E-4
 conv_1 = 96.4853     # eV to kJ/mol

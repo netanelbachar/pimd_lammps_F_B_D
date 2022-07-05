@@ -33,12 +33,12 @@ mass_e_amu = 0.00054858 * 0.84  # mass of single exiton
 kB = 0.0083144621 #Boltzmann const in kJ/mol/K
 
 # bhw_val = [3, 4, 6, 10, 30, 60]
-bhw_val = [30]
-# beads = [1, 8, 16, 32, 64, 80, 96]
+bhw_val = [60]
+beads = [1, 8, 16, 64, 80, 96]
 # beads = [4, 8, 12, 16]
-# beads = [4, 8, 12, 16, 32, 64]
+# beads = [4, 8, 12, 16, 64]
 # beads = [1, 2, 4, 8, 12, 16]
-beads = [32]
+# beads = [32]
 hw_ev = 26.73  # eV of hbaromega
 k_spring = 0.84*m*(((hw_ev/1000)*conv_1/conv)/hbar)**2  # Hartree/Bohr^2  8.10542107E-7
 print(k_spring)
@@ -51,9 +51,10 @@ for bhw in bhw_val:
     for i, p in enumerate(beads):
         temperature, beta = temp_for_lammps(hw_ev, bhw)
         print ("temp : ", temperature)
-        path = "/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic/boson10/bhw30/{}beads/".format(p)
+        path = "/home/netanelb2/Desktop/Netanel/Research/exiton/anharmonic/boson3/bhw60/{}beads/".format(p)    # Anharmonic  # REMEMBER TO CHANGE N = 10 / 3
+        # path = "/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic/boson10/bhw30/{}beads/".format(p)   # Harmonic
         print("Path: ", path)
-    #
+
     #     time_step, pot, avg_pot_exp, stdv_pot, trap, stdv_trap,trapvir, newvir, l, p_l = etot_b_2d_exitons(p, path, beta)
     #     # print("1) Energy Fermions / P: ", (2 * avg_pot_exp / (p*hw_exitons)), "+-", stdv_pot / hw_exitons)  # [Kj/mol]
     #     EB = np.mean ((trap / p) + newvir)  # it is divided by hw in hartree + conversion
@@ -64,27 +65,27 @@ for bhw in bhw_val:
     # print("Boson Energy:", list(Benergy))
     # print("Boson Energy STDV :", list(Bstdv))
 
-##### Boson3
+##### Boson3 Harmonic
 # energy_beta = np.array([5.6560275685720605, 3.147383429177774, 3.0648197524823098, 3.0149694389179937, 3.005403343416991, 2.965474462494367 , 2.8645714276422196])
 # stdv_energy_beta = np.array([0.0023915946511268516, 0.0007634896205101604, 0.0018825207740906726, 0.0015105669121401432 ,0.001638165972034178, 0.0009084307395090711, 0.0006890692807012612])
 # bhw_energy_beta = np.array([1, 3, 4, 6, 10, 30, 60])
-###### Boson10
+###### Boson10 Harmonic
 energy_beta = np.array([13.646026202596689, 10.2375407447492, 10.073433336077665, 10.062382145802628, 10.010431952912294, 9.89156989769864, 9.545800537485356])
 stdv_energy_beta = np.array([0.010058492324181866, 0.003955722773832558, 0.0033504818644061484, 0.003901105319106849, 0.00295066843408104, 0.0017469206883813514, 0.0012489266779385198])
 bhw_energy_beta = np.array([1, 3, 4, 6, 10, 30, 60])
 
 
-# tit = "bhw{} - Energy vs Beads".format(bhw_val[0])
-# # plt.axhline(y=3, color='r', linestyle='-', label="Convergence") # 3.36
-# # plt.axvline(x = 12, color='r', linestyle='-')
-# plt.plot(beads, Benergy, 'o', color="blue")
-# plt.errorbar(beads, Benergy, yerr=Bstdv, fmt="o", ecolor="black")
-# plt.title(tit)
-# # plt.ylim([2,4])
-# plt.xlabel("beads")
-# plt.ylabel("Total Energy")
-# plt.legend(loc='lower right')
-# plt.show()
+tit = "bhw{} - Energy vs Beads".format(bhw_val[0])
+# plt.axhline(y=3, color='r', linestyle='-', label="Convergence") # 3.36
+# plt.axvline(x = 12, color='r', linestyle='-')
+plt.plot(beads, Benergy, 'o', color="blue")
+plt.errorbar(beads, Benergy, yerr=Bstdv, fmt="o", ecolor="black")
+plt.title(tit)
+# plt.ylim([2,4])
+plt.xlabel("beads")
+plt.ylabel("Total Energy")
+plt.legend(loc='lower right')
+plt.show()
 
 # Plot for Energy vs Beta
 fig = plt.figure()
@@ -114,23 +115,23 @@ print("Time of execution:", duration)
 
 
 #################################### Plot of Periodic Potential > ####################################
-# x_moire_lims = 35
-#
-# X, Y = np.meshgrid(np.linspace(-x_moire_lims*nmtom, x_moire_lims*nmtom, 1024), np.linspace(-x_moire_lims*nmtom, x_moire_lims*nmtom, 1024)) # * 10 ** -9  # nm
-# Z = hbaromega + 2 * V_e * (np.cos((-2*pi/(math.sqrt(3)*moire_period))*X - (2*pi/moire_period)*Y - psi) +
-#                            np.cos((-2*pi/(math.sqrt(3)*moire_period))*X + (2*pi/moire_period)*Y - psi) +
-#                            np.cos(((4*pi)/(math.sqrt(3)*moire_period))*X - psi))
-# Z = Z/mevtoJ
-# # # Plot Moire Potential 2D
-# levels = np.linspace(Z.min(), Z.max(), 50)
-# fig, ax = plt.subplots()
-# plt.set_cmap('coolwarm')
-# graph = ax.contourf(X, Y, Z, levels=levels)
-# ax.set_title('Moire Potential (meV)')
-# plt.xlabel('x [m]')
-# plt.ylabel('y [m]')
-# plt.colorbar(graph)
-# plt.show()
+x_moire_lims = 35
+
+X, Y = np.meshgrid(np.linspace(-x_moire_lims*nmtom, x_moire_lims*nmtom, 1024), np.linspace(-x_moire_lims*nmtom, x_moire_lims*nmtom, 1024)) # * 10 ** -9  # nm
+Z = hbaromega + 2 * V_e * (np.cos((-2*pi/(math.sqrt(3)*moire_period))*X - (2*pi/moire_period)*Y - psi) +
+                           np.cos((-2*pi/(math.sqrt(3)*moire_period))*X + (2*pi/moire_period)*Y - psi) +
+                           np.cos(((4*pi)/(math.sqrt(3)*moire_period))*X - psi))
+Z = Z/mevtoJ
+# # Plot Moire Potential 2D
+levels = np.linspace(Z.min(), Z.max(), 50)
+fig, ax = plt.subplots()
+plt.set_cmap('coolwarm')
+graph = ax.contourf(X, Y, Z, levels=levels)
+ax.set_title('Moire Potential (meV)')
+plt.xlabel('x [m]')
+plt.ylabel('y [m]')
+plt.colorbar(graph)
+plt.show()
 #
 #
 # ########################################## Plot 1D Slice of 4 Potentials########################################

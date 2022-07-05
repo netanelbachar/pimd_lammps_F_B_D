@@ -54,7 +54,8 @@ def harmonic_potential_exciton_2d(V_e, a_m , x, y):
     return (16 * math.pi**2 * V_e / (2 * a_m**2)) * (x ** 2 + y ** 2)
 
 def harmonic_dimless_2d(x, y):
-    return 0.5 * (x ** 2 + y ** 2)
+    return  0.5 * (x ** 2 + y ** 2)
+
 
 
 #### Energy hw(nx+ny+1) for harmonic exciton from article
@@ -165,7 +166,7 @@ print("hw_2", hw_article / (1.60217656535*10**-22), "meV")
 
 
 ##Create meshgrid for x and y
-
+# based on the article: Solving 2D Time Independent Schrodinger Equation Using Numerical Method
 def schrodinger_2d(N=None, L=None, potential=None, V_e=None, moireperiod=None):
     X, Y = np.meshgrid(np.linspace(-L/2, L/2, N, dtype=float), np.linspace(-L/2, L/2, N, dtype=float))
     #Create matrix
@@ -174,17 +175,17 @@ def schrodinger_2d(N=None, L=None, potential=None, V_e=None, moireperiod=None):
     D = sparse.spdiags(diags, np.array([-1, 0, 1]), N, N)
 
     if potential == "harm2":
-        # X = X / 10 ** -9  # nanometers
-        # Y = Y / 10 ** -9  # nanometers
-
         V = harmonic_potential_2D(m, w, X, Y)
         T = - (hbar_1**2 / (2 * m)) * sparse.kronsum(D, D)
     elif potential == "harm_exc_2":
         V = harmonic_potential_exciton_2d(V_e, moireperiod, X, Y)
-        T = - (hbar ** 2 / (2 * mass_exciton)) * sparse.kronsum(D, D)
+        T = - (hbar**2 / (2 * mass_exciton)) * sparse.kronsum(D, D)
     elif potential == "dimless":
+        # X = X * (mass_exciton*omega)/hbar
+        # Y = Y * (mass_exciton*omega)/hbar
         V = harmonic_dimless_2d(X, Y)
-        T = - (1 / 2) * sparse.kronsum(D, D)
+        T = -( 1 / 2 ) * sparse.kronsum(D, D)
+
     else:
         print("Choose a Potential")
 
@@ -198,14 +199,14 @@ def schrodinger_2d(N=None, L=None, potential=None, V_e=None, moireperiod=None):
 
     return eigenvalues, eigenvectors, e_v
 
-llist = [1]  # harmonic exciton 0.5*10**-9
+llist = [1]  # harmonic exciton - harm_exc_2 - 0.5*10**-9
 for i in llist:
     eigenvalues, eigenvectors, e_v = schrodinger_2d(N=100, L=i, potential="dimless", V_e=V_e, moireperiod=moire_period)
     print("THIS is L", i)
-    print("rounded normalized: ", e_v)
-    print("Eigenval normalized: ", eigenvalues / eigenvalues[0])
-    print("Eigenval: ", eigenvalues )
-    # print("Eigenval in meV: ", eigenvalues / (1.60217656535*10**-22), "meV")
+    print("EigenValues - rounded & normalized: ", e_v)
+    print("EigenValues normalized: ", eigenvalues / eigenvalues[0])
+    print("EigenValues in Joul: ", eigenvalues )
+    print("EigenValues in meV: ", eigenvalues / (1.60217656535*10**-22), "meV")
 
 
 
