@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import math
 from scipy.sparse.linalg import eigsh
 from scipy.sparse.linalg import eigs
@@ -7,6 +8,8 @@ from scipy import sparse
 import os
 
 #
+path = "/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic_periodic/try1/log.lammps"
+
 #This code solves 1D Schrodinger Equation for any 1D Potential
 # This work quite fine for harmonic potential with a = -6 b = 6 and N = 1001
 # Constant - Only to see results
@@ -86,6 +89,23 @@ def laplacian_2D(n):
     return np.kron(D1, np.eye(n)) + np.kron(np.eye(n), D1)
 
 
+def read_file_pot_classic(filename, cut, s_rows, s_footer):
+    '''
+    :param filename: input log.lammps.{} file
+    :param cut: The first "cut" values will be eliminated.
+    :param s_rows: skiprows in log.lammps file since there is no data
+    :param s_footer: skipfooter in log.lammps file since there is no data
+    :return: potenital_energy, time_step, trap, newvir, trapvir
+    '''
+    df = pd.read_csv(filename, sep='\s+', engine='python', skiprows=s_rows, skipfooter=s_footer) # delimiter='\s+'
+    time_step = df['Time'][cut:]
+    potenital_energy = df['PotEng'][cut:]
+    kinetic_energy = df['c_kin'][cut:]
+    tot_energy = potenital_energy + kinetic_energy
+
+    return time_step, potenital_energy, kinetic_energy, tot_energy
+
+
 # Perturbation Theory for Anharmonic potential
 def perturbation_anharmonic():
     num = 5
@@ -148,8 +168,8 @@ def schrodinger_1D(num_eigen=4, potential=None, m=None, w=None, lamb=None, V_e=N
 
 z, vec = schrodinger_1D(num_eigen=4, potential=potential, m=m, w=w, lamb=lamb, V_e=V_e, moireperiod=moire_period)
 
-hw_article = hbar_omega_nx_ny(0, 0, V_e, hbar, mass_exciton, moire_period)
-print("hw_2", hw_article / (1.60217656535*10**-22), "meV")
+# hw_article = hbar_omega_nx_ny(0, 0, V_e, hbar, mass_exciton, moire_period)
+# print("hw_2", hw_article / (1.60217656535*10**-22), "meV")
 
 # plt.figure(figsize=(12, 10))
 # for i in range(len(z)):
@@ -199,67 +219,36 @@ def schrodinger_2d(N=None, L=None, potential=None, V_e=None, moireperiod=None):
 
     return eigenvalues, eigenvectors, e_v
 
-llist = [1]  # harmonic exciton - harm_exc_2 - 0.5*10**-9
-for i in llist:
-    eigenvalues, eigenvectors, e_v = schrodinger_2d(N=100, L=i, potential="dimless", V_e=V_e, moireperiod=moire_period)
-    print("THIS is L", i)
-    print("EigenValues - rounded & normalized: ", e_v)
-    print("EigenValues normalized: ", eigenvalues / eigenvalues[0])
-    print("EigenValues in Joul: ", eigenvalues )
-    print("EigenValues in meV: ", eigenvalues / (1.60217656535*10**-22), "meV")
+# llist = [1]  # harmonic exciton - harm_exc_2 - 0.5*10**-9
+# for i in llist:
+#     eigenvalues, eigenvectors, e_v = schrodinger_2d(N=100, L=i, potential="dimless", V_e=V_e, moireperiod=moire_period)
+#     print("THIS is L", i)
+#     print("EigenValues - rounded & normalized: ", e_v)
+#     print("EigenValues normalized: ", eigenvalues / eigenvalues[0])
+#     print("EigenValues in Joul: ", eigenvalues )
+#     print("EigenValues in meV: ", eigenvalues / (1.60217656535*10**-22), "meV")
 
 
 
-# def get_e(n):
-#     return eigenvectors.T[n].reshape((N, N))
+############## conservation of energy of a classical Simulation from log.lammps input ########
 
+t, pot, kin, tot_e = read_file_pot_classic(path, 0, 66, 27)
 
-# ##number of state
-# for n in range (0,10):
-# ##plot V
-#     plot0 = plt.figure(0,figsize=(8,6))
-#     cs = plt.contourf(X,Y,V,100)
-#     plt.colorbar()
-#
-# for c in cs.collections:
-#     c.set_rasterized(True)
-# plt.title("Plot of V")
-# plt.xlabel(r'$X$')
-# plt.ylabel(r'$Y$')
-#
-# ##plot eigenvector
-# plot1 = plt.figure(1, figsize=(8, 6))
-# cs = plt.contourf(X, Y, get_e(n), 300)
-# plt.colorbar()
-# for c in cs.collections:
-#     c.set_rasterized(True)
-# plt.title("Plot of Eigenfunction for {} state".format(n))
-# plt.xlabel(r'$X$')
-# plt.ylabel(r'$Y$')
-#
-# ##plot probability density
-# plot2 = plt.figure(2, figsize=(8, 6))
-# cs = plt.contourf(X, Y, get_e(n) ** 2, 300)
-# plt.colorbar()
-# for c in cs.collections:
-#     c.set_rasterized(True)
-# plt.title("Plot of Probability Density for {} state".format(n))
-# plt.xlabel(r'$X$')
-# plt.ylabel(r'$Y$')
-#
-#                           ##plot eigenvalues
-# plot3 = plt.figure(3)
-# alpha = eigenvalues[0]/2
-# E_a = eigenvalues/alpha
-# b = np.arange(0, len(eigenvalues),1)
-# plt.scatter(b, E_a, s=1444, marker="_", linewidth=2, zorder=3)
-# plt.title("Plot of eigenvalues")
-# plt.xlabel("$(n_{x})^2+(n_{y})^2$")
-# plt.ylabel(r'$mE/\hbar^2$')
-#
-# c = ['$E_{}$'.format(i) for i in range(0, len(eigenvalues))]
-# for i, txt in enumerate(c):
-#     plt.annotate(txt, (np.arange(0,
-#     len(eigenvalues), 1)[i], E_a[i]), ha="center")
-#     plt.show()
-#     plt.close('all')
+plt.figure(figsize=(12, 10))
+plt.plot(t, pot, color='b')
+plt.plot(t, kin, color='r')
+plt.plot(t, tot_e, color='k')
+plt.xlabel('Time [fs]', size=14)
+plt.ylabel('Total energy [Hartree]', size=14)
+plt.legend()
+plt.title('Conservation of Energy', size=14)
+plt.show()
+
+plt.figure(figsize=(12, 10))
+plt.plot(t, (((tot_e-tot_e[0])*100)/tot_e[0]), color='k')
+plt.xlabel('Time [fs]', size=14)
+plt.ylim(-0.1, 0.1)
+plt.ylabel('E(t)-E(0)/E(0)  [%]', size=14)
+plt.legend()
+plt.title('Energy Conservation', size=14)
+plt.show()
