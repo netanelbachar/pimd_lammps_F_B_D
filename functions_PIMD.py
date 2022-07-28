@@ -354,7 +354,7 @@ def permutation_prob_3(filename, beta, cut, perm_length):
 
     l_array = np.arange(1, perm_length+1)  # array([1, 2, 3])
 
-    # return l_array, permutation_probability.reshape((perm_length), length_array)          #THIS
+    # return l_array, permutation_probability.reshape((perm_length), length_array)         #THIS
     return l_array, permutation_probability
 
 
@@ -498,6 +498,93 @@ def f_minimum(x):
                              np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * x[0] - psi))
     return z
 
+def moire_plot(units, x_moire_lims, hbaromega, moire_period, V_e, nmtom, mevtoJ, psi, pi):
+    if units == 'meVmeter':
+        X, Y = np.meshgrid(np.linspace(-x_moire_lims * nmtom, x_moire_lims * nmtom, 1024),
+                           np.linspace(-x_moire_lims * nmtom, x_moire_lims * nmtom, 1024))  # * 10 ** -9  # nm
+
+        Z = hbaromega + 2 * V_e * (
+                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X - (2 * pi / moire_period) * Y - psi) +
+                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X + (2 * pi / moire_period) * Y - psi) +
+                    np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * X - psi))
+        Z = Z / mevtoJ
+        # # Plot Moire Potential 2D
+        levels = np.linspace(Z.min(), Z.max(), 50)
+        fig, ax = plt.subplots()
+        plt.set_cmap('coolwarm')
+        graph = ax.contourf(X, Y, Z, levels=levels)
+        ax.set_title('Moire Potential (meV)')
+        plt.xlabel('x [m]')
+        plt.ylabel('y [m]')
+        plt.colorbar(graph)
+        plt.show()
+    elif units == 'hartreebohr':
+        bohrconv = 5.2918e-11
+        V_e = 0.000661487
+        moire_period = 359.048
+        x_moire_lims = 1.5 * 10 ** 13
+        X, Y = np.meshgrid(np.linspace(-x_moire_lims * bohrconv, x_moire_lims * bohrconv, 1024),
+                           np.linspace(-x_moire_lims * bohrconv, x_moire_lims * bohrconv, 1024))  # * 10 ** -9  # nm
+
+        Z = hbaromega + 2 * V_e * (
+                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * Y - (2 * pi / moire_period) * X - psi) +
+                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * Y + (2 * pi / moire_period) * X - psi) +
+                    np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * Y - psi))
+        # Z = hbaromega + 2 * V_e * (
+        #             np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X - (2 * pi / moire_period) * Y - psi) +
+        #             np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X + (2 * pi / moire_period) * Y - psi) +
+        #             np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * X - psi))
+        # # Plot Moire Potential 2D
+        levels = np.linspace(Z.min(), Z.max(), 50)
+        fig, ax = plt.subplots()
+        plt.set_cmap('coolwarm')
+        graph = ax.contourf(X, Y, Z, levels=levels)
+        ax.set_title('Moire Potential (Hartree)')
+        plt.xlabel('x [bohr]')
+        plt.ylabel('y [bohr]')
+        plt.colorbar(graph)
+        plt.show()
+
+def four_potential_slice(x_h, x_an, x_m, y, V_e, moire_period, pi, psi, lamb, hbaromega):
+
+    z = hbaromega + 2 * V_e * (np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * x_m - (2 * pi / moire_period) * y - psi) +
+                             np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * x_m + (2 * pi / moire_period) * y - psi) +
+                             np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * x_m - psi))
+
+    z_harm = - 6 * V_e + ((16*np.pi**2*V_e) / (2*moire_period**2)) * x_h**2   # 108 is the minimum of z
+    z_anharm = - 6 * V_e + 0.25 * lamb * x_an**4
+
+    # # Plot Moire Potential 2D
+    plt.title('')
+    plt.xlabel('position at x axis [Bohr]')
+    plt.ylabel('energy [Hartree]')
+    plt.plot(x_m, z, color="black", label="Moire Potential at y = 0")
+    plt.plot(x_h, z_harm, color="blue", label="Harmonic Potential ")
+    plt.plot(x_an, z_anharm, color="purple", label="Anharmonic Potential".format(lamb))
+    plt.title("Slice of Moire Potential at y = 0")
+    plt.legend(loc="lower right")
+    plt.show()
+
+
+
+def three_d_contour_potential(x_lim, lamb1, k, V, pi):
+    X, Y = np.meshgrid(np.linspace(-x_lim, x_lim, 500), np.linspace(-x_lim, x_lim, 500))  # [nm]
+    Z_anharm = -6 * V + lamb1 * (X ** 4 + Y ** 4) + 2 * lamb1 * (X ** 2 * Y ** 2)
+    Z_harm = -6 * V + 0.5 * k * (X ** 2 + Y ** 2)
+    # Z_moire = hbaromega + 2 * V * (np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X - (2 * pi / moire_period) * Y - psi) +
+    #                          np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X + (2 * pi / moire_period) * Y - psi) +
+    #                          np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * X - psi))
+
+    fig3 = plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.contour3D(X, Y, Z_anharm, 1000, cmap='winter')  # Anharmonic (Blue)
+    ax.contour3D(X, Y, Z_harm, 100, cmap='autumn')  # Harmonic (Red)
+    # ax.contour3D(X, Y, Z_moire, 50, cmap='binary')  # Moire
+    ax.set_zlim([-0.004, 0.001])
+    ax.set_title('Blue - Anharmonic / Red - Harmonic')
+    ax.set_xlabel('x [bohr]')
+    ax.set_ylabel('y [bohr]')
+    plt.show()
 
 #                                                                                # Sign Problem
 def ana_2_bosons(beta, hbarw):

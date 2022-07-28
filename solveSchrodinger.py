@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+# This codes solves the finite schrodinger equation for any potential given. Here the Harmonic and An harmonic
+# potentials are written.
 hbar = 1             # Hartree
 m = 0.84             # amu
 L = 120              # bohr
@@ -13,10 +14,10 @@ def laplacian_1D(n):
         D[i, i+1] = D[i+1, i] = 1
     return D
 
+
 def laplacian_2D(n):
     D1 = laplacian_1D(n)
     return np.kron(D1, np.eye(n)) + np.kron(np.eye(n), D1)
-
 
 
 def two_d_schrodinger(L, n, s, pot):

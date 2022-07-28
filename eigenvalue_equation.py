@@ -7,10 +7,8 @@ from scipy.sparse.linalg import eigs
 from scipy import sparse
 import os
 
-#
-path = "/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic_periodic/try1/log.lammps"
 
-#This code solves 1D Schrodinger Equation for any 1D Potential
+# This code solves 1D Schrodinger Equation for any 1D Potential
 # This work quite fine for harmonic potential with a = -6 b = 6 and N = 1001
 # Constant - Only to see results
 m, w, hbar_1 = 1, 1, 1
@@ -60,7 +58,6 @@ def harmonic_dimless_2d(x, y):
     return  0.5 * (x ** 2 + y ** 2)
 
 
-
 #### Energy hw(nx+ny+1) for harmonic exciton from article
 def hbar_omega_nx_ny(nx, ny, V_e, hbar, mass, a_m):
     hw_article = np.sqrt((16*math.pi**2*V_e*hbar**2)/(mass*a_m**2))*(nx + ny + 1) # in J
@@ -87,23 +84,6 @@ def laplacian_1D(n):
 def laplacian_2D(n):
     D1 = laplacian_1D(n)
     return np.kron(D1, np.eye(n)) + np.kron(np.eye(n), D1)
-
-
-def read_file_pot_classic(filename, cut, s_rows, s_footer):
-    '''
-    :param filename: input log.lammps.{} file
-    :param cut: The first "cut" values will be eliminated.
-    :param s_rows: skiprows in log.lammps file since there is no data
-    :param s_footer: skipfooter in log.lammps file since there is no data
-    :return: potenital_energy, time_step, trap, newvir, trapvir
-    '''
-    df = pd.read_csv(filename, sep='\s+', engine='python', skiprows=s_rows, skipfooter=s_footer) # delimiter='\s+'
-    time_step = df['Time'][cut:]
-    potenital_energy = df['PotEng'][cut:]
-    kinetic_energy = df['c_kin'][cut:]
-    tot_energy = potenital_energy + kinetic_energy
-
-    return time_step, potenital_energy, kinetic_energy, tot_energy
 
 
 # Perturbation Theory for Anharmonic potential
@@ -232,12 +212,89 @@ def schrodinger_2d(N=None, L=None, potential=None, V_e=None, moireperiod=None):
 
 ############## conservation of energy of a classical Simulation from log.lammps input ########
 
-t, pot, kin, tot_e = read_file_pot_classic(path, 0, 66, 27)
+def read_file_pot_classic(filename, cut, s_rows, s_footer):
+    '''
+    :param filename: input log.lammps.{} file
+    :param cut: The first "cut" values will be eliminated.
+    :param s_rows: skiprows in log.lammps file since there is no data
+    :param s_footer: skipfooter in log.lammps file since there is no data
+    :return: potenital_energy, time_step, trap, newvir, trapvir
+    '''
+    df = pd.read_csv(filename, sep='\s+', engine='python', skiprows=s_rows, skipfooter=s_footer) # delimiter='\s+'
 
+    time_step = df['Time'][cut:]
+    potenital_energy = df['PotEng'][cut:]
+    kinetic_energy = df['KinEng'][cut:]
+    # c_kinetic_energy = df['c_sumek2d'][cut:]
+    spring_energy = df['v_springE'][cut:]
+    tot_eng = df['TotEng'][cut:]
+
+    # return time_step, potenital_energy, kinetic_energy, spring_energy, tot_eng, c_kinetic_energy
+    return time_step, potenital_energy, kinetic_energy, spring_energy, tot_eng
+
+
+def cons_energy_classic(number_of_files, path, cut, deli):  # Bosons
+    '''
+    In the Boson Ensemble
+    :param number_of_files: number of beads
+    :param path: the file path
+    :return: time_step, external pot divided by P, springE , kin
+    '''
+    # file_pimdb = path + 'pimdb.log'
+    # df = pd.read_csv(file_pimdb, delimiter='\s+')
+    # df = df.iloc[cut:-1] # I added this and removed "cut from all [] example  e_1_1 = df.iloc[cut:, 0]
+    # v_n_column = df.iloc[:, -1]
+    # v_n_column = v_n_column / 2625.499638  # Hartree conv (from kJ/mol)
+    v_n_column = 0
+
+    file = [path+'log.lammps.{}'.format(k) for k in range(0, number_of_files)]  # Makes a list of log.lammps.{}
+    # file = [path + 'log.lammps.0']
+    kin, pot, spr, tot_E, c_kin = 0, 0, 0, 0, 0
+    time_step = 0
+    for i in range(0, number_of_files):
+
+        # time_step, potenital_energy, kinetic_energy,  spring_eng, tot_eng,  c_kinetic_energy = read_file_pot_classic(file[i], cut, deli, 38)  # Harmonic (153,38) Auxiliary(167, 38)  sgnprob(145, 38)
+        time_step, potenital_energy, kinetic_energy, spring_eng, tot_eng = read_file_pot_classic(file[i], cut, deli, 38)  # Harmonic (153,38) Auxiliary(167, 38)  sgnprob(145, 38)
+
+        kin += kinetic_energy
+        # c_kin += c_kinetic_energy
+        pot += potenital_energy
+        spr += spring_eng
+        tot_E += tot_eng
+
+    spr = -spr
+    pot_P = pot / number_of_files               # Potential Divided by number of beads
+    kin = kin
+    # return time_step, pot_P, spr, kin, tot_E, c_kin
+    return time_step, pot_P, spr, kin, tot_E
+
+###################################################################################################################
+# path = "/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic_periodic/try1/log.lammps"
+# path = '/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic_periodic/try1/bead4/'
+path = '/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic_periodic/try1/pimdnve/try4/'
+deli = 86  # pimdnve 86  pimdnve1 117   try2/3- 86   try1- 93
+
+
+# t, pot_P, spr, kin,  tot_E, c_kin = cons_energy_classic(4, path, 0, deli)
+t, pot_P, spr, kin,  tot_E = cons_energy_classic(4, path, 0, deli)
+spr = spr # * 4
+pot = pot_P + spr
+totalenergy = pot + kin/4
+
+
+
+
+
+
+
+
+# Plots
 plt.figure(figsize=(12, 10))
-plt.plot(t, pot, color='b')
-plt.plot(t, kin, color='r')
-plt.plot(t, tot_e, color='k')
+# plt.plot(t, spr, color='g', label="Spring Energy")
+plt.plot(t, pot, color='b', label="Potential Energy")
+# plt.plot(t, tot_E, color='y', label="TOTENG")
+plt.plot(t, kin/4, color='r', label="Kinetic Energy")
+plt.plot(t, totalenergy, color='k', label="Total Energy")
 plt.xlabel('Time [fs]', size=14)
 plt.ylabel('Total energy [Hartree]', size=14)
 plt.legend()
@@ -245,7 +302,7 @@ plt.title('Conservation of Energy', size=14)
 plt.show()
 
 plt.figure(figsize=(12, 10))
-plt.plot(t, (((tot_e-tot_e[0])*100)/tot_e[0]), color='k')
+plt.plot(t, (((totalenergy-totalenergy[0])*100)/totalenergy[0]), color='k')
 plt.xlabel('Time [fs]', size=14)
 plt.ylim(-0.1, 0.1)
 plt.ylabel('E(t)-E(0)/E(0)  [%]', size=14)
