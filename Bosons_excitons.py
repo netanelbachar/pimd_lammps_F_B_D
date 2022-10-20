@@ -9,16 +9,9 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import pickle 
-from auxfunctions import ReadXYZofAllBeads
-from auxfunctions import GetBSE
 from auxfunctions import CalcPhiEstimator, CalcPhiEstimator_from_PLUMED, CalcVirEstimator_from_PLUMED, \
     CalcUintEstimator_from_PLUMED, permutation_prob_3, calc_Wn,  permutation_prob_10
-import math
-import itertools
 correct = False
-
-
 
 
 #HARMONIC FORCE CONSTANT!
@@ -39,7 +32,7 @@ Natoms = 3
 # beta_array = np.array([0.3877,  1.1632,  1.5510,  2.3264,  3.8774, 11.6322, 23.2644])
 bhw_val = [30, 60]
 
-step_start = 100000 #line to start from colvar.
+step_start = 10000 #line to start from colvar.
 step_end = 300000 #300000
 
 Nbeads = [4, 8, 12, 16, 32, 64]
@@ -159,6 +152,7 @@ for g in gs:
             path_save_plot_betaEB = path_+'Figures/betaEB_bosons{}bhw{}Nbeads{}.png'.format(Natoms, bhw, Nbeads[-1])
             path_save_plot_cond = path_+'Figures/cond_bosons{}bhw{}Nbeads{}.png'.format(Natoms, bhw, Nbeads[-1])
 
+            fig = plt.figure(figsize=(10, 7))
             tit = "Beta{} - Energy vs Beads".format(r_beta)
             # plt.axhline(y=3, color='r', linestyle='-', label="Convergence") # 3.36
             # plt.axvline(x = 12, color='r', linestyle='-')
@@ -172,7 +166,7 @@ for g in gs:
 
             # Plot for Condensation
 
-            fig = plt.figure(figsize=(10, 7))
+            fig1 = plt.figure(figsize=(10, 7))
             plt.bar(l, p_l / (1 / Natoms))
             plt.xlabel('Permutation Length', fontsize=20)
             plt.ylabel('Normalized Permutation Probability', fontsize=20)
@@ -180,11 +174,11 @@ for g in gs:
             plt.savefig(path_save_plot_cond)
             # plt.show()
 
-
+            print("All data:", save_data)  # ['g', 'seed', 'bhw', 'EB', 'l', 'p_l']
+            print("Beads: ", Nbeads, "Boson Energy: [meV]", Benergy)
 
         meanB = np.mean(save_data['EB'])
         BSEB = np.std(save_data['EB'])/np.sqrt(len(save_data['EB']))
-        print("All data:", save_data) #  ['g', 'seed', 'bhw', 'EB', 'l', 'p_l']
-        print("Beads: ", Nbeads, "Boson Energy: [meV]", Benergy)
+
 
 
