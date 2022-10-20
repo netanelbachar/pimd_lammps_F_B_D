@@ -1,5 +1,6 @@
 #!/local/hirshb/anaconda2/bin/python
-
+import numpy as np
+import pandas as pd
 def PlotWStyle(x, y, Nrow=1, Ncol=1, Ncurrent=1, xlabel='', ylabel='', title=''):
     #THIS FUNCTION ADDS SUBPLOTS TO FIGURE USING 2 DATA VECTORS, X AND Y.
     #NROW/NCOLS = NUMBER OF ROWS/COLUMNS OF SUBPLOTS. DEFAULT = 1 AND 1.
@@ -377,7 +378,7 @@ def GetBSE(data, Natoms, index, minsize=1, maxsize=2100, step=100, Nrow=1, Ncol=
 #    else:
     return asymptotic_BSE
 
-def CalcPhiEstimator(allbeads, omega, Natoms, mode='Harm1D',m=1):
+def CalcPhiEstimator(allbeads, omega, Natoms, mode='Harm2D_iso',m=1):
     import numpy as np 
     
     if (mode == 'Harm1D'):
@@ -614,3 +615,172 @@ def Analyze_s_from_PLUMED(path, fname, fname2, Nbeads, beta, plot=False):
     plt.show()
     
     return betas, Wb_s, Wf_s, betas_g, p_s*Wb, p_s*Wf, p_s
+
+
+def getBSE(data, w, step_start, step_end, columnname='Phi', Nblocks_list=[5]):
+
+    for Nblocks in Nblocks_list:
+
+        delta = int((step_end - step_start) / Nblocks)
+        block_res = pd.DataFrame(index=range(Nblocks), columns=[columnname])
+        block_res = block_res.fillna(np.nan)  # (0) # with 0s rather than NaNs
+        init_step = step_start
+        Wj = np.zeros(Nblocks)
+        Aj = np.zeros(Nblocks)
+        for block in range(Nblocks):
+            block_data = data[init_step:(init_step + delta)]
+            block_w = w[init_step:(init_step + delta)]
+            init_step = init_step + delta
+
+            block_res.loc[block, columnname] = np.average(block_data * block_w)
+            #            Wj[block] = (np.sum(block_w))**2/np.sum(block_w**2)
+            Wj[block] = np.sum(block_w)
+            Aj[block] = np.sum(block_data * block_w) / np.sum(block_w)
+
+        meanA = np.sum(Wj * Aj) / np.sum(Wj)
+        V2 = np.sum(Wj ** 2)
+        V1 = np.sum(Wj)
+        #        BSEA = np.sqrt( np.sum( np.multiply(Wj,(Aj-meanA)**2) )/(V1 - V2/V1) )/np.sqrt(Nblocks)
+        Neff = np.sum(Wj) ** 2 / np.sum(Wj ** 2)
+        print("Nblocks is: " + str(Nblocks) + " and Neff is: " + str(Neff))
+        # varA = np.sqrt( Neff*np.sum( save_data['Wj']*(save_data['EF']-meanA)**2 )/np.sum(save_data['Wj'])/np.sqrt(Neff-1) )
+        varA = np.sqrt(
+            Neff * np.sum(save_data['Wj'] * (save_data['EF'] - meanA) ** 2) / np.sum(save_data['Wj']) / np.sqrt(Neff))
+        BSEA = varA / np.sqrt(Nblocks)  # /np.sqrt(Nblocks)
+
+    #        BSEA = np.sqrt( np.sum( np.multiply(Wj,(Aj-meanA)**2) )/V1 )/np.sqrt(Nblocks)
+    #        mean = block_res[columnname].mean()
+    #        BSE =  block_res[columnname].std(ddof=1)/np.sqrt(Nblocks)
+
+    return (meanA, BSEA)
+
+
+def calc_Wn(beta, data, n, save_label_e, label='B'):
+    import numpy as np
+    ################################
+    # PRINT Wn FOR BOSON OR FERMIONS#
+    ################################
+    ib = 1 / beta
+
+    # Define function string. If I am running Bosons I am already calculating dlnWB/dbeta
+    if label == 'B':
+        save_label_n_new = ["+data['VB" + str(x) + "']" for x in range(1, n)]
+        save_label_n_new = [''] + save_label_n_new
+        sign = [1.0 for k in range(1, n + 1)]
+        func_string = [str(z) + "*np.exp(-beta*(data['E" + x + "']" + y + "))" for x, y, z in
+                       zip(save_label_e, save_label_n_new, sign)]
+        res = eval("1/n*(" + "+".join(func_string) + ")")
+
+    elif label == 'F':
+        save_label_n_new = ["*data_F['WF" + str(x) + "']" for x in range(1, n)]
+        save_label_n_new = [''] + save_label_n_new
+        sign = [pow(-1.0, k - 1) for k in range(n, 0, -1)]
+        func_string = [str(z) + "*np.exp(-beta*(data['E" + x + "']))" + y for x, y, z in
+                       zip(save_label_e, save_label_n_new, sign)]
+        res = eval("1/n*(" + "+".join(func_string) + ")")
+    else:
+        raise ('IOError: Please use labels F or B')
+
+    #    res = eval("data['E"+ save_label_e[-1] + "'] - ib*np.log(1/" + str(n) + "*(" + "+".join(func_string) + "))")
+    return res
+
+
+def permutation_prob_3(filename, beta, cut, perm_length):
+    import pandas as pd
+    import numpy as np
+    '''
+    :param filename: pimdb.log file
+    :param beta: beta in 1 / kJ/mol
+    :param cut: he first "cut" values will be eliminated.
+    :return: length of array l and permutation praobability
+    '''
+    # Here the pimdb.log file is in units of kJ/mol hence beta has to also be in same units
+    df = pd.read_csv(filename, delimiter='\s+')
+    df = df.iloc[cut:-1] # I added this and removed "cut from all [] example  e_1_1 = df.iloc[cut:, 0]
+
+    v_3_column = df.iloc[:, -1]
+    v_2_column = df.iloc[:, -2]
+    v_1_column = df.iloc[:, -3]
+    v_0_column = df.iloc[:, -4]
+    # e_1_1 = df.iloc[:, 0]
+    # e_2_2 = df.iloc[:, 1]
+    # e_2_1 = df.iloc[:, 2]
+    e_3_3 = df.iloc[:, 3]
+    e_3_2 = df.iloc[:, 4]
+    e_3_1 = df.iloc[:, 5]
+
+    v_3 = np.array([v_2_column, v_1_column, v_0_column])
+    e_3 = np.array([e_3_1, e_3_2, e_3_3])
+    permutation_probability = np.array([])
+    length_array = len(e_3[0])
+    p_l_denom = np.exp(- beta * (e_3_1 + v_2_column)) + np.exp(- beta * (e_3_2 + v_1_column)) \
+                + np.exp(- beta * (e_3_3 + v_0_column))
+    for j in range(0, perm_length):
+        p_l_num = np.exp(- beta * (e_3[j] + v_3[j]))
+        p_l = np.asarray(p_l_num / p_l_denom)
+        # permutation_probability = np.append(permutation_probability, np.array(p_l))      #THIS
+        permutation_probability = np.append(permutation_probability, np.mean(np.array(p_l)))
+
+    l_array = np.arange(1, perm_length+1)  # array([1, 2, 3])
+
+    # return l_array, permutation_probability.reshape((perm_length), length_array)         #THIS
+    return l_array, permutation_probability
+
+
+def permutation_prob_10(filename, beta, cut, perm_length):
+    '''
+    :param filename: pimdb.log file
+    :param beta: beta in 1 / kJ/mol
+    :param cut: he first "cut" values will be eliminated.
+    :return: length of array l and permutation praobability
+    '''
+    # Here the pimdb.log file is in units of kJ/mol hence beta has to also be in same units
+    df = pd.read_csv(filename, delimiter='\s+')
+    df = df.iloc[cut:-1] # I added this and removed "cut from all [] example  e_1_1 = df.iloc[cut:, 0]
+
+    v_10_column = df.iloc[:, -1]
+    v_9_column = df.iloc[:, -2]
+    v_8_column = df.iloc[:, -3]
+    v_7_column = df.iloc[:, -4]
+    v_6_column = df.iloc[:, -5]
+    v_5_column = df.iloc[:, -6]
+    v_4_column = df.iloc[:, -7]
+    v_3_column = df.iloc[:, -8]
+    v_2_column = df.iloc[:, -9]
+    v_1_column = df.iloc[:, -10]
+    v_0_column = df.iloc[:, -11]
+
+
+    e_10_1 = df.iloc[:, -12]
+    e_10_2 = df.iloc[:, -13]
+    e_10_3 = df.iloc[:, -14]
+    e_10_4 = df.iloc[:, -15]
+    e_10_5 = df.iloc[:, -16]
+    e_10_6 = df.iloc[:, -17]
+    e_10_7 = df.iloc[:, -18]
+    e_10_8 = df.iloc[:, -19]
+    e_10_9 = df.iloc[:, -20]
+    e_10_10 = df.iloc[:, -21]
+
+    v_10 = np.array([v_9_column, v_8_column, v_7_column, v_6_column, v_5_column,
+                     v_4_column, v_3_column, v_2_column, v_1_column, v_0_column])
+    e_10 = np.array([e_10_1, e_10_2, e_10_3, e_10_4, e_10_5, e_10_6, e_10_7, e_10_8, e_10_9, e_10_10])
+
+    permutation_probability = np.array([])
+    length_array = len(e_10[0])
+    p_l_denom = np.exp(- beta * (e_10_1 + v_9_column)) + np.exp(- beta * (e_10_2 + v_8_column)) + \
+                np.exp(- beta * (e_10_3 + v_7_column)) + np.exp(- beta * (e_10_4 + v_6_column)) + \
+                np.exp(- beta * (e_10_5 + v_5_column)) + np.exp(- beta * (e_10_6 + v_4_column)) + \
+                np.exp(- beta * (e_10_7 + v_3_column)) + np.exp(- beta * (e_10_8 + v_2_column)) + \
+                np.exp(- beta * (e_10_9 + v_1_column)) + np.exp(- beta * (e_10_10 + v_0_column))
+    for j in range(0, perm_length):
+        p_l_num = np.exp(- beta * (e_10[j] + v_10[j]))
+        p_l = np.asarray(p_l_num / p_l_denom)
+        # permutation_probability = np.append(permutation_probability, np.array(p_l))      #THIS
+        permutation_probability = np.append(permutation_probability, np.mean(np.array(p_l)))
+
+    l_array = np.arange(1, perm_length+1)  # array([1, 2, 3])
+
+    # return l_array, permutation_probability.reshape((perm_length), length_array)          #THIS
+    return l_array, permutation_probability
+

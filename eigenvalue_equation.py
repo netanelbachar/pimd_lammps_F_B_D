@@ -212,6 +212,45 @@ def schrodinger_2d(N=None, L=None, potential=None, V_e=None, moireperiod=None):
 
 ############## conservation of energy of a classical Simulation from log.lammps input ########
 
+def calc_kinetic_dumpvel(path, number_of_files, mass_amu, s_rows, s_footer):
+    file = [path + 'dump.velo_{}'.format(k) for k in range(1, number_of_files+1)]
+    kinetic_tot_rep = []
+    for i in range(0, number_of_files):
+        kinetic_rep = []
+        #Kinetic Energy
+        vel1 = []
+        vel2 = []
+        df = pd.read_csv(file[i], engine='python', skiprows=s_rows, skipfooter=s_footer)  # delimiter='\s# +'
+        df = df[8:]
+        for i in range(30):
+            if i % 11 == 0:
+                v1, v2 = df.iloc[i][0], df.iloc[i+1][0]
+                v1, v2 = v1.split(), v2.split()
+                v1x, v1y, v2x, v2y = float(v1[0]), float(v1[1]), float(v2[0]), float(v2[1])
+                vel1.append((v1x, v1y))
+                vel2.append((v2x, v2y))
+        for i in range(len(vel1)):
+            kin1 = 0.5 * mass_amu * (vel1[i][0] ** 2 + vel1[i][1] ** 2)
+            kin2 = 0.5 * mass_amu * (vel2[i][0] ** 2 + vel2[i][1] ** 2)
+            kin_rep = kin1 + kin2
+            kinetic_rep.append(kin_rep)
+        kinetic_tot_rep.append(np.asarray(kinetic_rep))
+    kinetic_total = kinetic_tot_rep[0] + kinetic_tot_rep[1] + kinetic_tot_rep[2]+ kinetic_tot_rep[3]
+    return kinetic_total
+
+def calc_potential_dump(path, number_of_files):
+    file = [path + 'system_{}.xyz'.format(k) for k in range(1, number_of_files+1)]  # Makes a list of log.lammps.{}
+    for i in range(0, number_of_files):
+        df = pd.read_csv(file[i], sep='\s+', engine='python', skiprows=0, skipfooter=0)
+        for i in range(30):
+            if i % 4 == 0:
+                x1, x2 = float(df.iloc[i].name[1]), float(df.iloc[i+1].name[1])
+                y1, y2 = float(df.iloc[i].name[2]), float(df.iloc[i + 1].name[2])
+                print (x1 , x2, y1, y2)
+    return 1, 2
+
+
+
 def read_file_pot_classic(filename, cut, s_rows, s_footer):
     '''
     :param filename: input log.lammps.{} file
@@ -246,16 +285,13 @@ def cons_energy_classic(number_of_files, path, cut, deli):  # Bosons
     # v_n_column = df.iloc[:, -1]
     # v_n_column = v_n_column / 2625.499638  # Hartree conv (from kJ/mol)
     v_n_column = 0
-
     file = [path+'log.lammps.{}'.format(k) for k in range(0, number_of_files)]  # Makes a list of log.lammps.{}
     # file = [path + 'log.lammps.0']
     kin, pot, spr, tot_E, c_kin = 0, 0, 0, 0, 0
     time_step = 0
     for i in range(0, number_of_files):
-
-        # time_step, potenital_energy, kinetic_energy,  spring_eng, tot_eng,  c_kinetic_energy = read_file_pot_classic(file[i], cut, deli, 38)  # Harmonic (153,38) Auxiliary(167, 38)  sgnprob(145, 38)
-        time_step, potenital_energy, kinetic_energy, spring_eng, tot_eng = read_file_pot_classic(file[i], cut, deli, 38)  # Harmonic (153,38) Auxiliary(167, 38)  sgnprob(145, 38)
-
+        # time_step, potenital_energy, kinetic_energy,  spring_eng, tot_eng,  c_kinetic_energy = read_file_pot_classic(file[i], cut, deli, 38)
+        time_step, potenital_energy, kinetic_energy, spring_eng, tot_eng = read_file_pot_classic(file[i], cut, deli, 38)
         kin += kinetic_energy
         # c_kin += c_kinetic_energy
         pot += potenital_energy
@@ -269,23 +305,23 @@ def cons_energy_classic(number_of_files, path, cut, deli):  # Bosons
     return time_step, pot_P, spr, kin, tot_E
 
 ###################################################################################################################
-# path = "/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic_periodic/try1/log.lammps"
-# path = '/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic_periodic/try1/bead4/'
-path = '/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic_periodic/try1/pimdnve/try4/'
-deli = 86  # pimdnve 86  pimdnve1 117   try2/3- 86   try1- 93
+# path = "/home/netanelb2/Desktop/Netanel/Research/PIMD/runs/distinguishable/moire_test/moire_nve/"
+path = "/home/netanelb2/Desktop/Netanel/Research/exiton/dt01/moire/moire_NVE/dt001/"
+# path = '/home/netanelb2/Desktop/Netanel/Research/exiton/harmonic_periodic/try1/pimdnve/pimd_m/pimd_2beads_nve/pimd_moire_nve1/'
 
+deli = 150  # pimdnve 86  pimdnve1 117   try2/3- 86   try1/5- 91  pimd_moire_nve - 108 - pimd_moire_try5-116
+bead_number = 32
+# c_kin = calc_kinetic_dumpvel(path, 4, 0.0004608072, 0, 0)
+# c_pot, c_spr = calc_potential_dump(path, 4)
+# print(c_kin)
 
 # t, pot_P, spr, kin,  tot_E, c_kin = cons_energy_classic(4, path, 0, deli)
-t, pot_P, spr, kin,  tot_E = cons_energy_classic(4, path, 0, deli)
+
+t, pot_P, spr, kin, tot_E = cons_energy_classic(bead_number, path, 0, deli)
 spr = spr # * 4
 pot = pot_P + spr
-totalenergy = pot + kin/4
-
-
-
-
-
-
+kin = kin / bead_number
+totalenergy = pot + kin
 
 
 # Plots
@@ -293,7 +329,7 @@ plt.figure(figsize=(12, 10))
 # plt.plot(t, spr, color='g', label="Spring Energy")
 plt.plot(t, pot, color='b', label="Potential Energy")
 # plt.plot(t, tot_E, color='y', label="TOTENG")
-plt.plot(t, kin/4, color='r', label="Kinetic Energy")
+plt.plot(t, kin, color='r', label="Kinetic Energy")
 plt.plot(t, totalenergy, color='k', label="Total Energy")
 plt.xlabel('Time [fs]', size=14)
 plt.ylabel('Total energy [Hartree]', size=14)

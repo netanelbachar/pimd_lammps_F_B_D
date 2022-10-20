@@ -31,7 +31,8 @@ def getBSE(data, w, step_start, step_end, columnname = 'Phi', Nblocks_list=[5]):
 #        BSEA = np.sqrt( np.sum( np.multiply(Wj,(Aj-meanA)**2) )/(V1 - V2/V1) )/np.sqrt(Nblocks)
         Neff = np.sum(Wj)**2/np.sum(Wj**2)
         print("Nblocks is: " + str(Nblocks) + " and Neff is: " + str(Neff))
-        varA = np.sqrt( Neff*np.sum( Wj*(Aj-meanA)**2 )/np.sum(Wj)/np.sqrt(Neff-1) ) 
+        # varA = np.sqrt( Neff*np.sum( save_data['Wj']*(save_data['EF']-meanA)**2 )/np.sum(save_data['Wj'])/np.sqrt(Neff-1) )
+        varA = np.sqrt(Neff * np.sum(save_data['Wj'] * (save_data['EF'] - meanA) ** 2) / np.sum(save_data['Wj']) / np.sqrt(Neff))
         BSEA = varA/np.sqrt(Nblocks) #/np.sqrt(Nblocks)
         
         
@@ -78,32 +79,44 @@ from auxfunctions import GetBSE
 from auxfunctions import CalcPhiEstimator, CalcPhiEstimator_from_PLUMED, CalcVirEstimator_from_PLUMED, CalcUintEstimator_from_PLUMED
 import math
 import itertools
-correct=False
+correct = False
 
 Natoms = 3
-Nbeads = 32 #[16,24,36,48,72,96]
-gs = [1]
+Nbeads = 64 #[16,24,36,48,72,96]
+gs = [0]
 lam = 0.0
-Msteps = 75
+Msteps = 30
 
-seeds = [98743501, 269451, 666472, 782943, 1239451]
+# seeds = [98743501, 269451, 666472, 782943, 1239451]
+seeds = [1239451]
 
 #User defined parameters
 kB = 0.0083144621 #Boltzmann const in kJ/mol/K
-bhw_val = [3] #[1.25, 1.5, 1.75, 2, 2.5]
+bhw_val = [10] #[1.25, 1.5, 1.75, 2, 2.5]
+temp_val = [31.019]
 d = 2
 
 
 # DIS BOSON FERMI
 step_start = 10000 #line to start from colvar.
-step_end = 750000 #Final line from colvar
+# step_end = 750000 #Final line from colvar
+step_end = 300000
 
-skiprows_in_Phi = 167    #  Harmonic 153   /   Aux 167  # extion3boson 153
+# step_start = 0 #line to start from colvar.
+# step_end = 162 #Final line from colvar
+
+skiprows_in_Phi = 134    #  Harmonic 153   /   Aux 167  # extion3boson 153
 
 #HARMONIC FORCE CONSTANT!
-omega = 0.003 #in eV 
+# omega = 0.003 #in eV
+# omega = omega/27.2114 #eV to Ha
+# omega_kJmol = omega/3.8088E-4 #Ha to kJmol
+
+#MOIRE FORCE CONSTANT!
+omega = 0.02673 #in eV
 omega = omega/27.2114 #eV to Ha
 omega_kJmol = omega/3.8088E-4 #Ha to kJmol
+
 
 #For BSE, Min block size, max block size, step and whether to plot convergence vs. block size or not.
 Nblocks = 5
@@ -116,25 +129,27 @@ save_data = pd.DataFrame(columns = ['g','seed','EF', 'Err_EF', 'EB', 'Err_EB', '
 count=0
 for g in gs:
     for ind, seed in enumerate(seeds):
-        print(g,seed)
+        print(g, seed)
         
         for bhw in bhw_val:
-            T = 34.8/bhw
-            beta = 1/(kB*T)
+            T = 31.019   # K
+            beta = 1/(kB*T)   # kJ/mol/K
             # path_to_save = "/home/netanelb2/Desktop/Netanel/Research/PIMD/runs/fermions/five2/bhw1p25/"
-            path_to_save = '/home/netanelb2/Desktop/Netanel/Research/PIMD/runs/fermions/gauss/bogo/bhw6/'
-            path = path_to_save + "/sim" + str(ind + 1) + "/"
+            # path_to_save = '/home/netanelb2/Desktop/Netanel/Research/PIMD/runs/fermions/gauss/bogo/bhw6/'
+            # path = '/home/netanelb2/Desktop/Netanel/Research/exiton/moire/3bosons/bhw30/32beads_1every_bh/'
+            path = "/home/netanelb2/Desktop/Netanel/Research/exiton/moire_one_3p/boson3/bhw10/64beads/"
+            # path = path_to_save + "/sim" + str(ind + 1) + "/"
+            print("path: ", path, "temp: [K] ", T, "beta: [kJ/mol/K]", beta, "omega_kjmol: " , omega_kJmol)
+            print("all energies are in kJ/mol")
 
 
-            print(path)
-            
             #Get Pot energy
-            Trap = CalcPhiEstimator_from_PLUMED(path, '/log.lammps',Nbeads, step_start, step_end, skip=skiprows_in_Phi, potlabel='c_trap')
+            Trap = CalcPhiEstimator_from_PLUMED(path, '/log.lammps', Nbeads, step_start, step_end, skip=skiprows_in_Phi, potlabel='c_trap')
             # N: I obtain Trap when I add all the TRAP from all logfiles and divide by number of beads.
             Trap = Trap / 3.8088E-4 #Ha to kJmol
                 
-            Phi = CalcPhiEstimator_from_PLUMED(path, '/log.lammps',Nbeads, step_start, step_end, skip=skiprows_in_Phi) 
-            Vir = CalcVirEstimator_from_PLUMED(path, '/log.lammps',Nbeads, step_start, step_end, skip=skiprows_in_Phi) 
+            Phi = CalcPhiEstimator_from_PLUMED(path, '/log.lammps',Nbeads, step_start, step_end, skip=skiprows_in_Phi) # Pot Estimator
+            Vir = CalcVirEstimator_from_PLUMED(path, '/log.lammps',Nbeads, step_start, step_end, skip=skiprows_in_Phi) # Kinetic Estimator
             
             Phi = Phi / 3.8088E-4 #Ha to kJmol
             Vir = Vir / 3.8088E-4 #Ha to kJmol
@@ -143,7 +158,7 @@ for g in gs:
             fname = "pimdb.log"
             
             try:
-                data = pd.read_csv(path + fname, sep='\s+', dtype='float64',header=None)
+                data = pd.read_csv(path + fname, sep='\s+', dtype='float64', header=None)
             except:
                 print("IOError: Problem reading file " + path+fname)
                 raise
@@ -212,7 +227,8 @@ for g in gs:
 
                 vir_EF = (Phi + Vir)*WF2/WB2
                 meansgn = np.mean(WF2/WB2)
-                EF2 = np.mean(vir_EF)/meansgn/omega_kJmol
+                # EF2 = np.mean(vir_EF)/meansgn/omega_kJmol
+                EF2 = np.mean(vir_EF) / meansgn
                 print('int. F Ener: ' +str(EF2) )       
                 save_data.loc[count,'EF'] = EF2
                 
@@ -223,7 +239,8 @@ for g in gs:
                 save_data.loc[count,'Err_EF'] = ERR
                 
                 vir_EF_corr = (Trap + Vir)*WF2/WB2
-                EF3 = np.mean(vir_EF_corr)/meansgn/omega_kJmol
+                # EF3 = np.mean(vir_EF_corr)/meansgn/omega_kJmol
+                EF3 = np.mean(vir_EF_corr) / meansgn
                 print('corrected int. F Ener: ' +str(EF3) )       
                 save_data.loc[count,'EF_corr'] = EF3
                 (mean_EF3, BSE_EF3) = getBSE(Trap + Vir, WF2/WB2,  step_start = 1, step_end = len(Phi))        
@@ -244,7 +261,8 @@ for g in gs:
                 #    print(EB2_reW)
                 
                 vir_EB = (Phi + Vir)
-                EB3 = np.mean(vir_EB)/omega_kJmol
+                # EB3 = np.mean(vir_EB)/omega_kJmol
+                EB3 = np.mean(vir_EB)
                 print('int. B Ener: ' + str(EB3) ) 
                 save_data.loc[count,'EB'] = EB3
                 (mean_EB3, BSE_EB3) = getBSE(Phi + Vir, np.ones(len(Phi)),  step_start = 1, step_end = len(Phi))        
@@ -257,23 +275,25 @@ for g in gs:
             else:
                 vir_EF = (Phi + Vir)*WF2/WB2
                 meansgn = np.mean(WF2/WB2)
-                EF2 = np.mean(vir_EF)/meansgn/omega_kJmol
+                # EF2 = np.mean(vir_EF)/meansgn/omega_kJmol
+                EF2 = np.mean(vir_EF) / meansgn
         #        print('av meansgn is: ' + str(meansgn))
-                print('nonint. F Ener: ' + str(EF2) )    
+        #         print('nonint. F Ener: ' + str(EF2) )
                 save_data.loc[count,'EF'] = EF2
                 
                 (mean_EF2, BSE_EF2) = getBSE(Phi + Vir, WF2/WB2,  step_start = 1, step_end = len(Phi))        
                 (meanw3, BSE_w3) = getBSE(WF2/WB2, np.ones(len(Phi)), step_start = 1, step_end = len(Phi))
                 ERR = np.sqrt((BSE_w3/meanw3)**2 + (BSE_EF2/mean_EF2)**2)*EF2
-                print('Err nonint. F is: ' + str(ERR))
+                # print('Err nonint. F is: ' + str(ERR))
                 save_data.loc[count,'Err_EF'] = ERR
-                print('mean sign is: ' + str(meanw3) + ' error: ' + str(BSE_w3))
+                # print('mean sign is: ' + str(meanw3) + ' error: ' + str(BSE_w3))
                 save_data.loc[count,'sign'] = meanw3
                 save_data.loc[count,'Err_sign'] = BSE_w3
                 
                 vir_EB = (Phi + Vir)
-                EB3 = np.mean(vir_EB)/omega_kJmol
-                print('nonint. B Ener: ' + str(EB3) ) 
+                # EB3 = np.mean(vir_EB)/omega_kJmol
+                EB3 = np.mean(vir_EB)
+                print('nonint. B Ener (BOSON ENERGY): ' + str(EB3) )
                 save_data.loc[count,'EB'] = EB3
                 (mean_EB3, BSE_EB3) = getBSE(Phi + Vir, np.ones(len(Phi)),  step_start = 1, step_end = len(Phi))        
     #            (meanw3, BSE_w3) = getBSE(WF2/WB2, np.ones(len(Phi)), step_start = 1, step_end = len(Phi))
@@ -294,7 +314,8 @@ for g in gs:
 #print(stdE)
 meanA = np.sum(save_data['Wj'] * save_data['EF'])/np.sum(save_data['Wj'])
 Neff = np.sum(save_data['Wj'])**2/np.sum(save_data['Wj']**2)
-varA = np.sqrt( Neff*np.sum( save_data['Wj']*(save_data['EF']-meanA)**2 )/np.sum(save_data['Wj'])/np.sqrt(Neff-1) )
+# varA = np.sqrt( Neff*np.sum( save_data['Wj']*(save_data['EF']-meanA)**2 )/np.sum(save_data['Wj'])/np.sqrt(Neff-1) )
+varA = np.sqrt( Neff*np.sum( save_data['Wj']*(save_data['EF']-meanA)**2 )/np.sum(save_data['Wj'])/np.sqrt(Neff))
 BSEA = varA/np.sqrt(Neff)
 
 # if (g!=0 or correct==True):
@@ -306,7 +327,7 @@ BSEA = varA/np.sqrt(Neff)
 meanB = np.mean(save_data['EB'])
 BSEB = np.std(save_data['EB'])/np.sqrt(len(save_data['EB']))
 
-save_data.to_csv(path_to_save+"dat", index=False)
+# save_data.to_csv(path_to_save+"dat", index=False)
 
 # if(g!=0):
 #     meanA_corr = np.sum(save_data['Wj'] * save_data['EF_corr'])/np.sum(save_data['Wj'])

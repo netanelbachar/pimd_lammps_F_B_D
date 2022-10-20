@@ -9,7 +9,7 @@ N = 3 # number of quantum particles
 conv = 2625.499638   # [1 Hartree = 2625.499638 kJ/mol]    or the other way arround 3.8088E-4
 conv_1 = 96.4853     # eV to kJ/mol
 # Constants
-part = 3                     # Quantum Particles
+part = 2                     # Quantum Particles
 kb = 3.16683 * 10 ** (-6)    # Boltzman in Hartree/K
 hbar, m = 1, 1               # hbar and mass
 
@@ -106,6 +106,9 @@ def block_averaging(cutoff, block_size, data):
 
 
 def make_block_average(cutoff, data):
+    '''
+    :return: block averaging graph
+    '''
     block_size_array = np.linspace(1, 1000, 500).astype(int)
     avg_array = np.zeros(len(block_size_array))
     stdv_array = np.zeros(len(block_size_array))
@@ -196,9 +199,9 @@ def etot_b_2d_harmonic(number_of_files, path):  # Bosons
     time_step = 0
     for i in range(0, number_of_files):
         try:
-            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 145, 38)  # Harmonic (153,38) Auxiliary(167, 38)  sgnprob(145, 38)
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 142, 38)  # Harmonic (153,38) Auxiliary(167, 38)  sgnprob(145, 38)
         except:
-            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 167, 38)
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 162, 38)
         pot += potential
         trap += trap1
         newvir += newvir1
@@ -435,9 +438,9 @@ def etot_b_2d_exitons(number_of_files, path, beta):  # Bosons
     time_step = 0
     for i in range(0, number_of_files):
         try:
-            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 153, 38)  #3bosons (153,38) 10boson (209,38) 100boson(929, 38)
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 148, 38)  #3bosons (153,38) 10boson (209,38) 100boson(929, 38)  148-moire
         except:
-            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 209, 38)
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data_exitons, 134, 38)   # 107
         pot += potential
         trap += trap1
         newvir += newvir1
@@ -520,28 +523,29 @@ def moire_plot(units, x_moire_lims, hbaromega, moire_period, V_e, nmtom, mevtoJ,
         plt.show()
     elif units == 'hartreebohr':
         bohrconv = 5.2918e-11
-        V_e = 0.000661487
+        V_e = 0.0006614878
         moire_period = 359.048
+
         x_moire_lims = 1.5 * 10 ** 13
         X, Y = np.meshgrid(np.linspace(-x_moire_lims * bohrconv, x_moire_lims * bohrconv, 1024),
                            np.linspace(-x_moire_lims * bohrconv, x_moire_lims * bohrconv, 1024))  # * 10 ** -9  # nm
 
-        Z = hbaromega + 2 * V_e * (
-                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * Y - (2 * pi / moire_period) * X - psi) +
-                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * Y + (2 * pi / moire_period) * X - psi) +
-                    np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * Y - psi))
         # Z = hbaromega + 2 * V_e * (
-        #             np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X - (2 * pi / moire_period) * Y - psi) +
-        #             np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X + (2 * pi / moire_period) * Y - psi) +
-        #             np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * X - psi))
+        #             np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * Y - (2 * pi / moire_period) * X - psi) +
+        #             np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * Y + (2 * pi / moire_period) * X - psi) +
+        #             np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * Y - psi))
+        Z = hbaromega + 2 * V_e * (
+                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X - (2 * pi / moire_period) * Y - psi) +
+                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X + (2 * pi / moire_period) * Y - psi) +
+                    np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * X - psi))
         # # Plot Moire Potential 2D
         levels = np.linspace(Z.min(), Z.max(), 50)
         fig, ax = plt.subplots()
         plt.set_cmap('coolwarm')
         graph = ax.contourf(X, Y, Z, levels=levels)
-        ax.set_title('Moire Potential (Hartree)')
-        plt.xlabel('x [bohr]')
-        plt.ylabel('y [bohr]')
+        ax.set_title('Moire Potential (Hartree)', fontsize=15)
+        plt.xlabel('x [bohr]', fontsize=15)
+        plt.ylabel('y [bohr]', fontsize=15)
         plt.colorbar(graph)
         plt.show()
 
@@ -552,16 +556,16 @@ def four_potential_slice(x_h, x_an, x_m, y, V_e, moire_period, pi, psi, lamb, hb
                              np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * x_m - psi))
 
     z_harm = - 6 * V_e + ((16*np.pi**2*V_e) / (2*moire_period**2)) * x_h**2   # 108 is the minimum of z
-    z_anharm = - 6 * V_e + 0.25 * lamb * x_an**4
+    z_anharm = - 6 * V_e +  lamb * x_an**4
 
     # # Plot Moire Potential 2D
     plt.title('')
-    plt.xlabel('position at x axis [Bohr]')
-    plt.ylabel('energy [Hartree]')
-    plt.plot(x_m, z, color="black", label="Moire Potential at y = 0")
+    plt.xlabel('position at x axis [Bohr]', fontsize=15)
+    plt.ylabel('energy [Hartree]', fontsize=15)
+    plt.plot(x_m, z, color="black", label="Moire Potential")
     plt.plot(x_h, z_harm, color="blue", label="Harmonic Potential ")
     plt.plot(x_an, z_anharm, color="purple", label="Anharmonic Potential".format(lamb))
-    plt.title("Slice of Moire Potential at y = 0")
+    plt.title("Slice of Potentials at y = 0", fontsize=15)
     plt.legend(loc="lower right")
     plt.show()
 
@@ -577,13 +581,13 @@ def three_d_contour_potential(x_lim, lamb1, k, V, pi):
 
     fig3 = plt.figure()
     ax = plt.axes(projection='3d')
-    ax.contour3D(X, Y, Z_anharm, 1000, cmap='winter')  # Anharmonic (Blue)
+    ax.contour3D(X, Y, Z_anharm, 100, cmap='winter')  # Anharmonic (Blue)
     ax.contour3D(X, Y, Z_harm, 100, cmap='autumn')  # Harmonic (Red)
     # ax.contour3D(X, Y, Z_moire, 50, cmap='binary')  # Moire
     ax.set_zlim([-0.004, 0.001])
-    ax.set_title('Blue - Anharmonic / Red - Harmonic')
-    ax.set_xlabel('x [bohr]')
-    ax.set_ylabel('y [bohr]')
+    ax.set_title('Blue - Anharmonic / Red - Harmonic', fontsize=15)
+    ax.set_xlabel('x [bohr]', fontsize=15)
+    ax.set_ylabel('y [bohr]', fontsize=15)
     plt.show()
 
 #                                                                                # Sign Problem
@@ -641,7 +645,7 @@ def sgnprob_etot_b_2d_harmonic(number_of_files, path, beta):  # Bosons
 
     for i in range(0, number_of_files):
         try:
-            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 145, 38)  # Harmonic (153,38) Auxiliary(167, 38)  sgnprob(145, 38)
+            potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 76, 38)  # Harmonic (153,38) Auxiliary(167, 38)  sgnprob(145, 38)
 
         except:
             potential, time_step, trap1, newvir1, trapvir1 = read_file_pot(file[i], cut_data, 167, 38)

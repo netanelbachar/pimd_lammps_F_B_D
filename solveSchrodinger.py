@@ -6,7 +6,7 @@ hbar = 1             # Hartree
 m = 0.84             # amu
 L = 120              # bohr
 n = 51
-pot = 'anharm'
+pot = 'harm'
 
 def laplacian_1D(n):
     D = -2.0 * np.eye(n)
@@ -35,10 +35,10 @@ def two_d_schrodinger(L, n, s, pot):
     # Energies
     T = -hbar ** 2 / (2 * m) / (dx ** 2) * laplacian_2D(n)  # Kinetic Energy
     if pot == 'harm':
-        omega = 0.00098215  # 1/s
+        omega = 0.00098215 # 1/s- This number is obtained from sqrt(k/m) where k = 8.1045*10^-7 and m = 0.84 (26.73 meV)
         V = np.diag( 0.5 * m * omega**2 * (X**2 + Y**2))        # Potential
     elif pot == 'anharm':
-        l = 9.5*10**-11        # Hartree / bohr**4
+        l = 9.5*10**-11        # Hartree / bohr**4    - 1.7978 *10**-12   - 9.5*10**-11
         V = np.diag(l * (X**4 + Y**4) + 2*l*((X**2)*(Y**2)))
     H = T + V                                               # Hamiltonian
     # Eigenvalues and Vectors
