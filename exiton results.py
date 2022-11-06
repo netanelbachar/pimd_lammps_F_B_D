@@ -1,6 +1,6 @@
 
 ##### Boson3 ##########
-print ("This are the results for the bosonic energies of Moire One Well in kJ/mol, Density 3, at different temperatures")
+print ("This are the results for the bosonic energies of Moire One Well in meV, Density 3(so divide by 3), at different temperatures")
 Benergy10 = [-273.80588814799756, -256.7142983400086, -251.46671274677112, -249.45408859182115, -247.10178069683235, -246.54960287398632]
 Benergy6 = [-260.07426405614274, -250.55983845109313, -248.12931074310595, -247.31526776332356, -246.58926793833965, -246.0627986151288]
 Benergy4 =[-252.21363518100978, -247.0369132205172, -245.94483284465275, -245.36965644986068, -245.1490359658642, -245.07692567130405]

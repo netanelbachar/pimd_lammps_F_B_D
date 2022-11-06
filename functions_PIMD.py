@@ -535,9 +535,9 @@ def moire_plot(units, x_moire_lims, hbaromega, moire_period, V_e, nmtom, mevtoJ,
         #             np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * Y + (2 * pi / moire_period) * X - psi) +
         #             np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * Y - psi))
         Z = hbaromega + 2 * V_e * (
-                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X - (2 * pi / moire_period) * Y - psi) +
-                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * X + (2 * pi / moire_period) * Y - psi) +
-                    np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * X - psi))
+                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * Y - (2 * pi / moire_period) * X - psi) +
+                    np.cos((-2 * pi / (math.sqrt(3) * moire_period)) * Y + (2 * pi / moire_period) * X - psi) +
+                    np.cos(((4 * pi) / (math.sqrt(3) * moire_period)) * Y - psi))
         # # Plot Moire Potential 2D
         levels = np.linspace(Z.min(), Z.max(), 50)
         fig, ax = plt.subplots()
@@ -563,8 +563,8 @@ def four_potential_slice(x_h, x_an, x_m, y, V_e, moire_period, pi, psi, lamb, hb
     plt.xlabel('position at x axis [Bohr]', fontsize=15)
     plt.ylabel('energy [Hartree]', fontsize=15)
     plt.plot(x_m, z, color="black", label="Moire Potential")
-    plt.plot(x_h, z_harm, color="blue", label="Harmonic Potential ")
-    plt.plot(x_an, z_anharm, color="purple", label="Anharmonic Potential".format(lamb))
+    plt.plot(x_h, z_harm, color="red", label="Harmonic Potential ")
+    plt.plot(x_an, z_anharm, color="blue", label="Anharmonic Potential".format(lamb))
     plt.title("Slice of Potentials at y = 0", fontsize=15)
     plt.legend(loc="lower right")
     plt.show()
